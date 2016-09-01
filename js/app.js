@@ -102,6 +102,7 @@ function throwKnife(posX, posY, velX, velY)
 	yourKnife.body.velocity.x = velX;
 	yourKnife.body.velocity.y = velY;
 	
+	//todo: destroy knife(/knives) when they hit level bounds because HOLY SHIT IS THAT A HUGE MEMORY LEAK
 	//also todo: only let player have one knife at once
 }
 
