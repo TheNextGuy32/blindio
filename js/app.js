@@ -17,12 +17,16 @@ function create() {
 	//Stuff is rendered in the order it's added (back to front)
 	//Desired order: Background < Wind (to be added later) < Players < Walls
 	
-    game.add.sprite(0, 0, 'skyBackground');
-
+	var WORLD_WIDTH = 2000;
+	var WORLD_HEIGHT = 2000;
+    game.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'skyBackground');
+	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+	
 	player = game.add.sprite(game.world.width/2, game.world.height/2, 'playerSprite');
 	game.physics.enable(player);
 	player.body.gravity.y = 0;
 	player.body.collideWorldBounds = true;
+	game.camera.follow(player);
 	
 	otherPlayers = game.add.group();
 	otherPlayers.enableBody = true;
@@ -37,8 +41,8 @@ function create() {
 	newWall.scale.setTo(2, 1);
 	newWall.body.immovable = true;
 	
-	newWall = walls.create(2*game.world.width/3, 3*game.world.height/4-75, 'wallSprite');
-	newWall.scale.setTo(1, 3);
+	newWall = walls.create(1000, 1100, 'wallSprite');
+	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
 	
 	
@@ -49,6 +53,7 @@ function create() {
 
 function update() {
 	game.physics.arcade.collide(player, walls);
+	game.physics.arcade.collide(player, otherPlayers);
 	game.physics.arcade.overlap(player, walls, destroySecondThing, null, this);
 	game.physics.arcade.overlap(yourKnife, walls, destroyFirstThing, null, this);
 	game.physics.arcade.overlap(yourKnife, otherPlayers, destroyBothThings, null, this);
@@ -96,6 +101,8 @@ function throwKnife(posX, posY, velX, velY)
 {
 	yourKnife = game.add.sprite(posX, posY, 'wallSprite');
 	game.physics.enable(yourKnife);
+	yourKnife.checkWorldBounds = true;
+	yourKnife.outOfBoundsKill = true;
 	yourKnife.body.gravity.y = 0;
 	yourKnife.scale.setTo(1/5, 1/5);
 	
