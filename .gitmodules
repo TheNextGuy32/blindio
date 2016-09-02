@@ -1,0 +1,3 @@
+[submodule "blindio-game-server"]
+	path = blindio-game-server
+	url = git@github.com:TheNextGuy32/blindio-game-server.git
