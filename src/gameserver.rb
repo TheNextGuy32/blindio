@@ -1,15 +1,14 @@
-require 'namey'
+require 'faker'
 
 class GameServer
   def initialize
-    @namey = Namey::Generator.new
     @rooms = []
     @logActivity = true
   end
 
   def createPlayer
     {
-      :name => @namey.name(:all)
+      :name => Faker::Name.name
     }
   end
 
@@ -47,7 +46,7 @@ class GameServer
 
   def createRoom
     room = {
-      :name => @namey.name(:all),
+      :name => Faker::Name.name,
       :players => [],
       :maxOccupancy => 8
     }
