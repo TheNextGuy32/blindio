@@ -1,0 +1,2 @@
+require './app'
+Pumatra.run
