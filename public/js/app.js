@@ -47,8 +47,12 @@ function create() {
 	
 	
 	//Todo in the future: Change arrow keys to WASD
-    cursors = game.input.keyboard.createCursorKeys();
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.W]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.A]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.S]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.D]);
 	game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
+	game.input.onDown.add(throwKnifeWithMouse, this);
 }
 
 function update() {
@@ -62,38 +66,27 @@ function update() {
 	player.body.velocity.y = 0;
 	var moveSpeed = 300;
 	
-	if(cursors.left.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.A))
 	{
 		player.body.velocity.x -= moveSpeed;
 	}
-	if(cursors.right.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.D))
 	{
 		player.body.velocity.x += moveSpeed;
 	}
-	if(cursors.up.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.W))
 	{
 		player.body.velocity.y -= moveSpeed;
 	}
-	if(cursors.down.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.S))
 	{
 		player.body.velocity.y += moveSpeed;
 	}
 	
 	//Enforces one-knife-at-once limit, re-enables throw as soon as existing knife dies. Todo: Add time delay like in unity game
-	if(yourKnife == null)
+	if(yourKnife && !yourKnife.alive)
 	{
-		if(game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR))
-		{
-			//Todo: Trigger this on mouse click, use position to determine knife velocity
-			throwKnife(player.position.x+20, player.position.y+20, 400, 0);
-		}
-	}
-	else
-	{
-		if(!yourKnife.alive)
-		{
-			yourKnife = null;
-		}
+		yourKnife = null;
 	}
 }
 
@@ -108,13 +101,25 @@ function throwKnife(posX, posY, velX, velY)
 	
 	yourKnife.body.velocity.x = velX;
 	yourKnife.body.velocity.y = velY;
+}
+
+function throwKnifeWithMouse(pointer)
+{
+	if(yourKnife)
+	{
+		//Todo: Display this on HUD somehow
+		console.log("Error: Trying to throw a knife while one is already out");
+		return;
+	}
 	
-	//todo: destroy knife(/knives) when they hit level bounds because HOLY SHIT IS THAT A HUGE MEMORY LEAK
-	//also todo: only let player have one knife at once
+	var knifeVel = new Phaser.Point(pointer.position.x-(player.body.center.x-game.camera.position.x), pointer.position.y-(player.body.center.y-game.camera.position.y));
+	knifeVel.setMagnitude(400);
+	
+	throwKnife(player.body.center.x, player.body.center.y, knifeVel.x, knifeVel.y);
 }
 
 //These will have to be replaced with more specific functions later, but they work for prototyping.
-function destroyFirstThing(firstThing, secondThing){firstThing.destroy(); firstThing = null;}
+function destroyFirstThing(firstThing, secondThing){firstThing.destroy();}
 function destroySecondThing(firstThing, secondThing){secondThing.destroy();}
 function destroyBothThings(firstThing, secondThing)
 {
