@@ -1,6 +1,6 @@
 "use strict";
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-var player, yourKnife, otherPlayers, otherKnives, cursors, walls;
+var game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+var player, yourKnife, otherPlayers, otherKnives, cursors, walls, knifeStatusText;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 function preload() {
@@ -45,6 +45,8 @@ function create() {
 	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
 	
+	knifeStatusText = game.add.text(0, 0, "Throwable Knife: true");
+	
 	
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([Phaser.Keyboard.W]);
@@ -87,27 +89,29 @@ function update() {
 	if(yourKnife && !yourKnife.alive)
 	{
 		yourKnife = null;
+		knifeStatusText.text = "Throwable Knife: true";
 	}
+	knifeStatusText.position.x = game.camera.position.x+7;
+	knifeStatusText.position.y = game.camera.position.y+10;
 }
 
-function throwKnife(posX, posY, velX, velY)
+function throwKnife(posPoint, velPoint)
 {
-	yourKnife = game.add.sprite(posX, posY, 'wallSprite');
+	yourKnife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
 	game.physics.enable(yourKnife);
 	yourKnife.checkWorldBounds = true;
 	yourKnife.outOfBoundsKill = true;
 	yourKnife.body.gravity.y = 0;
 	yourKnife.scale.setTo(1/5, 1/5);
 	
-	yourKnife.body.velocity.x = velX;
-	yourKnife.body.velocity.y = velY;
+	yourKnife.body.center = posPoint;
+	yourKnife.body.velocity = velPoint;
 }
 
 function throwKnifeWithMouse(pointer)
 {
-	if(yourKnife)
+	if(yourKnife) //Safeguarding against null value of yourKnife
 	{
-		//Todo: Display this on HUD somehow
 		console.log("Error: Trying to throw a knife while one is already out");
 		return;
 	}
@@ -115,7 +119,8 @@ function throwKnifeWithMouse(pointer)
 	var knifeVel = new Phaser.Point(pointer.position.x-(player.body.center.x-game.camera.position.x), pointer.position.y-(player.body.center.y-game.camera.position.y));
 	knifeVel.setMagnitude(400);
 	
-	throwKnife(player.body.center.x, player.body.center.y, knifeVel.x, knifeVel.y);
+	throwKnife(player.body.center, knifeVel);
+	knifeStatusText.text = "Throwable Knife: false";
 }
 
 //These will have to be replaced with more specific functions later, but they work for prototyping.

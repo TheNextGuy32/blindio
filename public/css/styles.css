@@ -1,1 +1,18 @@
-canvas{margin: auto;}
+canvas {
+    position: absolute;
+    top: 50%; left: 50%;
+	margin-top: -360px;
+    margin-left: -640px;
+}
+
+body {
+	margin 0;
+	background-color: #111;
+	background-image: linear-gradient(to bottom, #333,#111);
+	overflow: hidden;
+	color: #eee;
+	font-family: verdana;
+	text-align: center;
+}
+
+p{height:1000px;}
