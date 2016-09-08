@@ -58,6 +58,8 @@ class GameServer
     player[:room] = room
     
     puts getRoomStatus(room) if @logActivity
+
+    room
   end
 
   def removePlayerFromRoom(player)

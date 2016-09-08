@@ -8,13 +8,12 @@ def connectPlayer(ws)
   ws.send("You've connected to the Blind.io websocket server!")
 
   player = settings.gameServer.createPlayer(ws)
-  settings.gameServer.joinRandomRoom(player)
+  room = settings.gameServer.joinRandomRoom(player)
 
-  ws.send("You've been named #{player[:name]}.")
+  ws.send("You've been named #{player[:name]} and have joined a room named #{room[:name]}.")
 end
 
 def disconnectPlayer(ws)
-  warn("Websocket closed")
   settings.gameServer.deletePlayer(ws)
 end
 
