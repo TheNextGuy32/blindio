@@ -60,9 +60,11 @@ function create() {
 function update() {
 	game.physics.arcade.collide(player, walls);
 	game.physics.arcade.collide(player, otherPlayers);
-	game.physics.arcade.overlap(player, walls, destroySecondThing, null, this);
-	game.physics.arcade.overlap(yourKnife, walls, destroyFirstThing, null, this);
-	game.physics.arcade.overlap(yourKnife, otherPlayers, destroyBothThings, null, this);
+	if(yourKnife)
+	{
+		game.physics.arcade.overlap(yourKnife, walls, destroyFirstThing, null, this);
+		game.physics.arcade.overlap(yourKnife, otherPlayers, destroyBothThings, null, this);
+	}
 	
 	player.body.velocity.x = 0;
 	player.body.velocity.y = 0;
@@ -91,6 +93,7 @@ function update() {
 		yourKnife = null;
 		knifeStatusText.text = "Throwable Knife: true";
 	}
+	
 	knifeStatusText.position.x = game.camera.position.x+7;
 	knifeStatusText.position.y = game.camera.position.y+10;
 }
@@ -118,6 +121,9 @@ function throwKnifeWithMouse(pointer)
 	
 	var knifeVel = new Phaser.Point(pointer.position.x-(player.body.center.x-game.camera.position.x), pointer.position.y-(player.body.center.y-game.camera.position.y));
 	knifeVel.setMagnitude(400);
+	console.log(knifeVel+" - "+player.body.velocity);
+	knifeVel.add(player.body.velocity.x, player.body.velocity.y);
+	console.log(knifeVel);
 	
 	throwKnife(player.body.center, knifeVel);
 	knifeStatusText.text = "Throwable Knife: false";
