@@ -1,6 +1,6 @@
 "use strict";
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-var player, yourKnife, otherPlayers, otherKnives, cursors, walls;
+var game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+var player, yourKnife, otherPlayers, otherKnives, cursors, walls, knifeStatusText;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 function preload() {
@@ -45,10 +45,16 @@ function create() {
 	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
 	
+	knifeStatusText = game.add.text(0, 0, "Throwable Knife: true");
+	
 	
 	//Todo in the future: Change arrow keys to WASD
-    cursors = game.input.keyboard.createCursorKeys();
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.W]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.A]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.S]);
+	game.input.keyboard.addKeyCapture([Phaser.Keyboard.D]);
 	game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
+	game.input.onDown.add(throwKnifeWithMouse, this);
 }
 
 function update() {
@@ -62,59 +68,63 @@ function update() {
 	player.body.velocity.y = 0;
 	var moveSpeed = 300;
 	
-	if(cursors.left.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.A))
 	{
 		player.body.velocity.x -= moveSpeed;
 	}
-	if(cursors.right.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.D))
 	{
 		player.body.velocity.x += moveSpeed;
 	}
-	if(cursors.up.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.W))
 	{
 		player.body.velocity.y -= moveSpeed;
 	}
-	if(cursors.down.isDown)
+	if(game.input.keyboard.isDown(Phaser.Keyboard.S))
 	{
 		player.body.velocity.y += moveSpeed;
 	}
 	
 	//Enforces one-knife-at-once limit, re-enables throw as soon as existing knife dies. Todo: Add time delay like in unity game
-	if(yourKnife == null)
+	if(yourKnife && !yourKnife.alive)
 	{
-		if(game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR))
-		{
-			//Todo: Trigger this on mouse click, use position to determine knife velocity
-			throwKnife(player.position.x+20, player.position.y+20, 400, 0);
-		}
+		yourKnife = null;
+		knifeStatusText.text = "Throwable Knife: true";
 	}
-	else
-	{
-		if(!yourKnife.alive)
-		{
-			yourKnife = null;
-		}
-	}
+	knifeStatusText.position.x = game.camera.position.x+7;
+	knifeStatusText.position.y = game.camera.position.y+10;
 }
 
-function throwKnife(posX, posY, velX, velY)
+function throwKnife(posPoint, velPoint)
 {
-	yourKnife = game.add.sprite(posX, posY, 'wallSprite');
+	yourKnife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
 	game.physics.enable(yourKnife);
 	yourKnife.checkWorldBounds = true;
 	yourKnife.outOfBoundsKill = true;
 	yourKnife.body.gravity.y = 0;
 	yourKnife.scale.setTo(1/5, 1/5);
 	
-	yourKnife.body.velocity.x = velX;
-	yourKnife.body.velocity.y = velY;
+	yourKnife.body.center = posPoint;
+	yourKnife.body.velocity = velPoint;
+}
+
+function throwKnifeWithMouse(pointer)
+{
+	if(yourKnife) //Safeguarding against null value of yourKnife
+	{
+		console.log("Error: Trying to throw a knife while one is already out");
+		return;
+	}
 	
-	//todo: destroy knife(/knives) when they hit level bounds because HOLY SHIT IS THAT A HUGE MEMORY LEAK
-	//also todo: only let player have one knife at once
+	var knifeVel = new Phaser.Point(pointer.position.x-(player.body.center.x-game.camera.position.x), pointer.position.y-(player.body.center.y-game.camera.position.y));
+	knifeVel.setMagnitude(400);
+	
+	throwKnife(player.body.center, knifeVel);
+	knifeStatusText.text = "Throwable Knife: false";
 }
 
 //These will have to be replaced with more specific functions later, but they work for prototyping.
-function destroyFirstThing(firstThing, secondThing){firstThing.destroy(); firstThing = null;}
+function destroyFirstThing(firstThing, secondThing){firstThing.destroy();}
 function destroySecondThing(firstThing, secondThing){secondThing.destroy();}
 function destroyBothThings(firstThing, secondThing)
 {
