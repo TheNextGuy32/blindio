@@ -3,6 +3,14 @@ let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, creat
 let player, yourKnife, otherPlayers, otherKnives, cursors, walls, knifeStatusText, fpsText, windGroup;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
+//TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
+let windSpeed = 0;
+let windPhase = 0;
+let windDirection = 0;
+let breezeForce = 1;
+let breezeRotationSpeed = 1;
+let breezeBackAndForthSpeed = 1;
+
 function preload() {
     game.load.image('skyBackground', 'assets/sky.png');
     game.load.image('playerSprite', 'assets/player.png');
@@ -72,15 +80,42 @@ function create() {
 }
 
 function update() {
+	//Collision groups
 	game.physics.arcade.collide(player, walls);
 	game.physics.arcade.collide(player, otherPlayers);
 	game.physics.arcade.collide(player, windGroup);
 	game.physics.arcade.collide(windGroup, walls);
-	game.physics.arcade.overlap(yourKnife, walls, knifeHitsWall, null, this);
-	game.physics.arcade.overlap(yourKnife, otherPlayers, knifeHitsPlayer, null, this);
+	if(yourKnife != null)
+	{
+		if(yourKnife.alive)
+		{
+			game.physics.arcade.collide(yourKnife, windGroup);
+			game.physics.arcade.overlap(yourKnife, walls, knifeHitsWall, null, this);
+			game.physics.arcade.overlap(yourKnife, otherPlayers, knifeHitsPlayer, null, this);
+		}
+		else
+		{
+			yourKnife = null;
+			knifeStatusText.text = "Throwable Knife: true";
+		}
+	}
 	
-	windGroup.forEach(function(particle){game.world.wrap(particle);/*Do wind accel stuff here*/}, this, true, null);
 	
+	//Wind acceleration & world wrap
+	windDirection = breezeRotationSpeed * game.time.time;
+	//sound stuff here MAYBE
+	windPhase = breezeBackAndForthSpeed * game.time.time;
+	let deltaVelX = Math.cos(windDirection) * Math.sin(windPhase) * breezeForce;
+	let deltaVelY = Math.sin(windDirection) * Math.sin(windPhase) * breezeForce;
+	windGroup.forEach(function(particle)
+	{
+		particle.body.velocity.x += deltaVelX;
+		particle.body.velocity.y += deltaVelY;
+		
+		game.world.wrap(particle);
+	}, this, true, null);
+	
+	//Player movement
 	player.body.velocity.x = 0;
 	player.body.velocity.y = 0;
 	let playerMoveSpeed = 300;
@@ -101,14 +136,7 @@ function update() {
 		player.body.velocity.y += playerMoveSpeed;
 	}
 	
-	//Enforces one-knife-at-once limit, re-enables throw as soon as existing knife dies. Todo: Add time delay like in unity game
-	if(yourKnife && !yourKnife.alive)
-	{
-		yourKnife = null;
-		knifeStatusText.text = "Throwable Knife: true";
-	}
-	
-	
+	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	knifeStatusText.position.x = game.camera.position.x+7;
 	knifeStatusText.position.y = game.camera.position.y+10;
 	
@@ -155,4 +183,11 @@ function knifeHitsPlayer(knife, player)
 {
 	knife.destroy();
 	player.destroy();
+}
+
+function windHitsThing(wind, thing)
+{
+	//TODO: THIS
+	//Wind changes velocity, thing is unaffected
+	//Function should be used with players & knives, not walls.
 }
