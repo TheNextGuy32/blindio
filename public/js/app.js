@@ -1,7 +1,16 @@
 "use strict";
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let player, yourKnife, otherPlayers, otherKnives, cursors, walls, knifeStatusText, fpsText, windGroup;
+let localPlayer, displayHandler, otherPlayers, otherKnives, cursors, walls, knifeStatusText, fpsText, windGroup;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
+
+//Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
+let MOVEMENT =
+Object.seal({
+    LEFT: Phaser.Keyboard.A,
+    RIGHT: Phaser.Keyboard.D,
+    UP: Phaser.Keyboard.W,
+    DOWN: Phaser.Keyboard.S,
+});
 
 //TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
 let windSpeed = 0;
@@ -43,11 +52,7 @@ function create() {
 		}
 	}
 	
-	player = game.add.sprite(game.world.width/2, game.world.height/2, 'playerSprite');
-	game.physics.enable(player);
-	player.body.gravity.y = 0;
-	player.body.collideWorldBounds = true;
-	game.camera.follow(player);
+	localPlayer = new Player();
 	
 	otherPlayers = game.add.group();
 	otherPlayers.enableBody = true;
@@ -66,39 +71,16 @@ function create() {
 	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
 	
-	knifeStatusText = game.add.text(0, 0, "Throwable Knife: true");
-	fpsText = game.add.text(0, 0, "");
-	
+	displayHandler = new HUD();
 	
 	//Todo in the future: Change arrow keys to WASD
-	game.input.keyboard.addKeyCapture([Phaser.Keyboard.W]);
-	game.input.keyboard.addKeyCapture([Phaser.Keyboard.A]);
-	game.input.keyboard.addKeyCapture([Phaser.Keyboard.S]);
-	game.input.keyboard.addKeyCapture([Phaser.Keyboard.D]);
-	game.input.keyboard.addKeyCapture([Phaser.Keyboard.SPACEBAR]);
-	game.input.onDown.add(throwKnifeWithMouse, this);
+	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
+	game.input.onDown.add(localPlayer.throwKnife, localPlayer);
 }
 
 function update() {
 	//Collision groups
-	game.physics.arcade.collide(player, walls);
-	game.physics.arcade.collide(player, otherPlayers);
-	game.physics.arcade.collide(player, windGroup);
 	game.physics.arcade.collide(windGroup, walls);
-	if(yourKnife != null)
-	{
-		if(yourKnife.alive)
-		{
-			game.physics.arcade.collide(yourKnife, windGroup);
-			game.physics.arcade.overlap(yourKnife, walls, knifeHitsWall, null, this);
-			game.physics.arcade.overlap(yourKnife, otherPlayers, knifeHitsPlayer, null, this);
-		}
-		else
-		{
-			yourKnife = null;
-			knifeStatusText.text = "Throwable Knife: true";
-		}
-	}
 	
 	
 	//Wind acceleration & world wrap
@@ -115,73 +97,38 @@ function update() {
 		game.world.wrap(particle);
 	}, this, true, null);
 	
-	//Player movement
-	player.body.velocity.x = 0;
-	player.body.velocity.y = 0;
-	let playerMoveSpeed = 300;
-	if(game.input.keyboard.isDown(Phaser.Keyboard.A))
-	{
-		player.body.velocity.x -= playerMoveSpeed;
-	}
-	if(game.input.keyboard.isDown(Phaser.Keyboard.D))
-	{
-		player.body.velocity.x += playerMoveSpeed;
-	}
-	if(game.input.keyboard.isDown(Phaser.Keyboard.W))
-	{
-		player.body.velocity.y -= playerMoveSpeed;
-	}
-	if(game.input.keyboard.isDown(Phaser.Keyboard.S))
-	{
-		player.body.velocity.y += playerMoveSpeed;
-	}
+	//Updating things (for now just the player)
+	localPlayer.update();
+	
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
-	knifeStatusText.position.x = game.camera.position.x+7;
-	knifeStatusText.position.y = game.camera.position.y+10;
-	
-	fpsText.position.x = game.camera.position.x+7;
-	fpsText.position.y = game.camera.position.y+675;
-	fpsText.text = game.time.fps+" FPS";
+	displayHandler.update();
 }
 
 function throwKnife(posPoint, velPoint)
 {
-	yourKnife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
-	game.physics.enable(yourKnife);
-	yourKnife.checkWorldBounds = true;
-	yourKnife.outOfBoundsKill = true;
-	yourKnife.body.gravity.y = 0;
-	yourKnife.scale.setTo(1/5, 1/5);
+	localPlayer.knife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
+	game.physics.enable(localPlayer.knife);
+	localPlayer.knife.checkWorldBounds = true;
+	localPlayer.knife.outOfBoundsKill = true;
+	localPlayer.knife.body.gravity.y = 0;
+	localPlayer.knife.scale.setTo(1/5, 1/5);
 	
-	yourKnife.body.center = posPoint;
-	yourKnife.body.velocity = velPoint;
-}
-
-function throwKnifeWithMouse(pointer)
-{
-	if(yourKnife) //Safeguarding against null value of yourKnife
-	{
-		console.log("Error: Trying to throw a knife while one is already out");
-		return;
-	}
-	
-	let knifeVel = new Phaser.Point(pointer.position.x-(player.body.center.x-game.camera.position.x), pointer.position.y-(player.body.center.y-game.camera.position.y));
-	knifeVel.setMagnitude(400);
-	
-	throwKnife(player.body.center, knifeVel);
-	knifeStatusText.text = "Throwable Knife: false";
+	localPlayer.knife.body.center = posPoint;
+	localPlayer.knife.body.velocity = velPoint;
 }
 
 //Overlap functions
 function knifeHitsWall(knife, wall)
 {
-	knife.destroy();
+	console.log("YOU KNIFED A WALL");
+//	knife.destroy(); //This is dangerous when we're dealing with sprite-vs-group overlaps, so I'm using the bool the overlap test returns to destroy the knife in the player's update.
 }
 
 function knifeHitsPlayer(knife, player)
 {
-	knife.destroy();
+	console.log("YOU KNIFED A PLAYER");
+//	knife.destroy(); //See knifeHitsWall.
 	player.destroy();
 }
 
@@ -190,4 +137,111 @@ function windHitsThing(wind, thing)
 	//TODO: THIS
 	//Wind changes velocity, thing is unaffected
 	//Function should be used with players & knives, not walls.
+}
+
+
+//Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
+function Player()
+{
+	this.knife = null;
+	this.moveSpeed = 300;
+	this.knifeSpeed = 800;
+	this.gameObject;
+	
+	this.init = function()
+	{
+		this.gameObject = game.add.sprite(game.world.width/2, game.world.height/2, 'playerSprite');
+		game.physics.enable(this.gameObject);
+		this.gameObject.body.gravity.y = 0;
+		this.gameObject.body.collideWorldBounds = true;
+		game.camera.follow(this.gameObject);
+	}
+	
+	this.update = function()
+	{
+		//Collision
+		game.physics.arcade.collide(this.gameObject, walls);
+		game.physics.arcade.collide(this.gameObject, otherPlayers);
+		game.physics.arcade.collide(this.gameObject, windGroup);
+		
+		//Knife maintenance
+		if(this.knife != null)
+		{
+			if(this.knife.alive)
+			{
+				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
+				
+				if(game.physics.arcade.overlap(this.knife, otherPlayers, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
+				{
+					this.knife.destroy();
+					this.knife = null;
+				}
+			}
+			else
+			{
+				this.knife = null;
+			}
+		}
+		
+		//Movement
+		this.gameObject.body.velocity.x = 0;
+		this.gameObject.body.velocity.y = 0;
+		if(game.input.keyboard.isDown(MOVEMENT.LEFT))
+		{
+			this.gameObject.body.velocity.x -= this.moveSpeed;
+		}
+		if(game.input.keyboard.isDown(MOVEMENT.RIGHT))
+		{
+			this.gameObject.body.velocity.x += this.moveSpeed;
+		}
+		if(game.input.keyboard.isDown(MOVEMENT.UP))
+		{
+			this.gameObject.body.velocity.y -= this.moveSpeed;
+		}
+		if(game.input.keyboard.isDown(MOVEMENT.DOWN))
+		{
+			this.gameObject.body.velocity.y += this.moveSpeed;
+		}
+	}
+	
+	this.throwKnife = function(pointer)
+	{
+		if(this.knife) //Safeguarding against null value of knife
+		{
+			console.log("Error: Trying to throw a knife while one is already out");
+			return;
+		}
+	
+		let knifeVel = new Phaser.Point(pointer.position.x-(this.gameObject.body.center.x-game.camera.position.x), pointer.position.y-(this.gameObject.body.center.y-game.camera.position.y));
+		knifeVel.setMagnitude(this.knifeSpeed);
+	
+		throwKnife(this.gameObject.body.center, knifeVel);
+	}
+	
+	this.init();
+}
+
+function HUD()
+{
+	this.knifeStatusText;
+	this.fpsText;
+	
+	this.init = function()
+	{
+		this.knifeStatusText = game.add.text(0, 0, "");
+		this.fpsText = game.add.text(0, 0, "");
+	}
+	
+	this.update = function()
+	{
+		this.knifeStatusText.position.x = game.camera.position.x+7;
+		this.knifeStatusText.position.y = game.camera.position.y+10;
+		this.knifeStatusText.text = "Throwable Knife: "+(localPlayer.knife == null);
+	
+		this.fpsText.position.x = game.camera.position.x+7;
+		this.fpsText.position.y = game.camera.position.y+675;
+		this.fpsText.text = game.time.fps+" FPS";
+	}
+	
+	this.init();
 }
