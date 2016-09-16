@@ -48,6 +48,7 @@ function create() {
 		{
 			let newWind = windGroup.create(x, y, 'playerSprite');
 			newWind.scale.setTo(1/5, 1/5);
+			newWind.body.mass = 0.5;
 			//newWind.body.velocity.y = -5000;
 		}
 	}
@@ -105,17 +106,18 @@ function update() {
 	displayHandler.update();
 }
 
-function throwKnife(posPoint, velPoint)
+function throwKnife(player, posPoint, velPoint)
 {
-	localPlayer.knife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
+	player.knife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
 	game.physics.enable(localPlayer.knife);
-	localPlayer.knife.checkWorldBounds = true;
-	localPlayer.knife.outOfBoundsKill = true;
-	localPlayer.knife.body.gravity.y = 0;
-	localPlayer.knife.scale.setTo(1/5, 1/5);
+	player.knife.checkWorldBounds = true;
+	player.knife.outOfBoundsKill = true;
+	player.knife.body.gravity.y = 0;
+	player.knife.scale.setTo(1/5, 1/5);
 	
-	localPlayer.knife.body.center = posPoint;
-	localPlayer.knife.body.velocity = velPoint;
+	player.knife.body.center = posPoint;
+	player.knife.body.velocity = velPoint;
+	player.knife.body.mass = 100;
 }
 
 //Overlap functions
@@ -123,6 +125,7 @@ function knifeHitsWall(knife, wall)
 {
 	console.log("YOU KNIFED A WALL");
 //	knife.destroy(); //This is dangerous when we're dealing with sprite-vs-group overlaps, so I'm using the bool the overlap test returns to destroy the knife in the player's update.
+	//This function isn't being called, since it does absolutely nothing at the moment, but I'm leaving it here in case we want to do something with it. Play a sound, for instance.
 }
 
 function knifeHitsPlayer(knife, player)
@@ -154,6 +157,7 @@ function Player()
 		game.physics.enable(this.gameObject);
 		this.gameObject.body.gravity.y = 0;
 		this.gameObject.body.collideWorldBounds = true;
+		this.gameObject.body.mass = 1000;
 		game.camera.follow(this.gameObject);
 	}
 	
@@ -215,7 +219,7 @@ function Player()
 		let knifeVel = new Phaser.Point(pointer.position.x-(this.gameObject.body.center.x-game.camera.position.x), pointer.position.y-(this.gameObject.body.center.y-game.camera.position.y));
 		knifeVel.setMagnitude(this.knifeSpeed);
 	
-		throwKnife(this.gameObject.body.center, knifeVel);
+		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
 	
 	this.init();
