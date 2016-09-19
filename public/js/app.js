@@ -1,4 +1,5 @@
 "use strict";
+
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 let localPlayer, displayHandler, otherPlayers, otherKnives, cursors, walls, knifeStatusText, fpsText, windGroup;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
@@ -16,9 +17,9 @@ Object.seal({
 let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
-let breezeForce = 1;
-let breezeRotationSpeed = 1;
-let breezeBackAndForthSpeed = 1;
+let breezeForce = 3;
+let breezeRotationSpeed = 0.00001;
+let breezeBackAndForthSpeed = 0.0001;
 
 function preload() {
     game.load.image('skyBackground', 'assets/sky.png');
@@ -83,24 +84,22 @@ function update() {
 	//Collision groups
 	game.physics.arcade.collide(windGroup, walls);
 	
-	
 	//Wind acceleration & world wrap
-	windDirection = breezeRotationSpeed * game.time.time;
-	//sound stuff here MAYBE
-	windPhase = breezeBackAndForthSpeed * game.time.time;
-	let deltaVelX = Math.cos(windDirection) * Math.sin(windPhase) * breezeForce;
-	let deltaVelY = Math.sin(windDirection) * Math.sin(windPhase) * breezeForce;
-	windGroup.forEach(function(particle)
-	{
-		particle.body.velocity.x += deltaVelX;
-		particle.body.velocity.y += deltaVelY;
+	windDirection = (breezeRotationSpeed * game.time.time) % (2*Math.PI);//  What direction teh  wind is pointing
+	windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The bakc and worth sway of wind
+
+	let windSpeed = Math.sin(windPhase) * breezeForce;
+	
+	windGroup.forEach(
+		function(particle) {
+			particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
+			particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
 		
-		game.world.wrap(particle);
-	}, this, true, null);
+			game.world.wrap(particle);
+		}, this, true, null);
 	
 	//Updating things (for now just the player)
 	localPlayer.update();
-	
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
