@@ -1,16 +1,17 @@
 require 'sinatra'
 require 'sinatra-websocket'
 require './src/gameserver.rb'
+require './src/player.rb'
 
 set :gameServer, GameServer.new
 
 def connectPlayer(ws)
   ws.send("You've connected to the Blind.io websocket server!")
 
-  player = settings.gameServer.createPlayer(ws)
-  room = settings.gameServer.joinRandomRoom(player)
+  player = Player.new(ws)
+  settings.gameServer.addPlayer(player)
 
-  ws.send("You've been named #{player[:name]} and have joined a room named #{room[:name]}.")
+  ws.send("You've been named #{ player.name }.")
 end
 
 def disconnectPlayer(ws)
@@ -27,7 +28,7 @@ get '/' do
       ws.onclose do disconnectPlayer(ws) end
       
       ws.onmessage do |msg|
-        #EM.next_tick { settings.sockets.each{|s| s.send(msg) } }
+        EM.next_tick { settings.sockets.each{|s| s.send(msg) } }
       end
     end
   end
