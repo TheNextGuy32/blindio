@@ -1,7 +1,7 @@
 "use strict";
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let localPlayer, displayHandler, otherPlayers, otherKnives, cursors, walls, knifeStatusText, fpsText, windGroup;
+let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windGroup;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
@@ -17,9 +17,9 @@ Object.seal({
 let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
-let breezeForce = 3;
-let breezeRotationSpeed = 0.00001;
-let breezeBackAndForthSpeed = 0.0001;
+const breezeForce = 3;
+const breezeRotationSpeed = 0.00001;
+const breezeBackAndForthSpeed = 0.0001;
 
 function preload() {
     game.load.image('skyBackground', 'assets/sky.png');
@@ -55,10 +55,16 @@ function create() {
 	}
 	
 	localPlayer = new Player();
+	localPlayer.init(game.world.width/2, game.world.height/2, "Player");	//Todo: Update function to feature random-ish starting locations, player name as seen by server
 	
-	otherPlayers = game.add.group();
-	otherPlayers.enableBody = true;
-	let newPlayer = otherPlayers.create(3*game.world.width/4, game.world.height/3, 'playerSprite');
+	otherPlayerGameObjects = game.add.group();
+	otherPlayerGameObjects.enableBody = true;
+	otherPlayers = [];
+	otherPlayers.push(new NPC());
+	otherPlayers[0].init(3*game.world.width/4, game.world.height/3, "CPU Player #1", otherPlayerGameObjects);
+	otherPlayers.push(new NPC());
+	otherPlayers[1].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2", otherPlayerGameObjects);
+	console.log(otherPlayers);
 
 
 	walls = game.add.group();
@@ -100,6 +106,7 @@ function update() {
 	
 	//Updating things (for now just the player)
 	localPlayer.update();
+	otherPlayers.forEach(function(element, index, array){element.update();});
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
@@ -141,18 +148,18 @@ function windHitsThing(wind, thing)
 	//Function should be used with players & knives, not walls.
 }
 
-
 //Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
 function Player()
 {
+	this.name = "Unassigned Player";
 	this.knife = null;
 	this.moveSpeed = 300;
 	this.knifeSpeed = 800;
 	this.gameObject;
 	
-	this.init = function()
+	this.init = function(x, y, name)
 	{
-		this.gameObject = game.add.sprite(game.world.width/2, game.world.height/2, 'playerSprite');
+		this.gameObject = game.add.sprite(x, y, 'playerSprite');
 		game.physics.enable(this.gameObject);
 		this.gameObject.body.gravity.y = 0;
 		this.gameObject.body.collideWorldBounds = true;
@@ -220,8 +227,54 @@ function Player()
 	
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
+}
+
+function NPC()
+{
+	this.name = "Unassigned player";
+	this.knife = null;
+	this.gameObject;
+	this.init = function(x, y, name, group)
+	{
+		this.gameObject = group.create(x, y, 'playerSprite');
+		this.name = name;
+	}
 	
-	this.init();
+	this.update = function()
+	{
+		if(this.knife != null)
+		{
+			if(this.knife.alive)
+			{
+				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
+				
+				if(game.physics.arcade.overlap(this.knife, otherPlayers) || game.physics.arcade.overlap(this.knife, walls)) //Knife cutting funcions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
+				{
+					this.knife.destroy();
+					this.knife = null;
+				}
+			}
+			else
+			{
+				this.knife = null;
+			}
+		}
+	}
+	
+	this.changeVelocity = function(newVel)
+	{
+		this.gameObject.body.velocity = newVel;
+	}
+	
+	this.changePosition = function(newPos)
+	{
+		this.gameObject.body.position = newPos;
+	}
+	
+	this.throwKnife = function(vel)
+	{
+		throwKnife(this, this.gameObject.body.center, knifeVel);
+	}
 }
 
 function HUD()
