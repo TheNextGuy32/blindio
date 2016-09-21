@@ -64,7 +64,6 @@ function create() {
 	otherPlayers[0].init(3*game.world.width/4, game.world.height/3, "CPU Player #1", otherPlayerGameObjects);
 	otherPlayers.push(new NPC());
 	otherPlayers[1].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2", otherPlayerGameObjects);
-	console.log(otherPlayers);
 
 
 	walls = game.add.group();
@@ -141,11 +140,14 @@ function knifeHitsPlayer(knife, player)
 	player.destroy();
 }
 
-function windHitsThing(wind, thing)
+function windHitsThing(thing, wind)
 {
-	//TODO: THIS
 	//Wind changes velocity, thing is unaffected
 	//Function should be used with players & knives, not walls.
+	
+	let deltaPos = new Phaser.Point(wind.body.position.x-thing.body.position.x, wind.body.position.y-thing.body.position.y);
+	let posDot = deltaPos.dot(Phaser.Point.normalize(wind.body.velocity));
+	wind.body.velocity.add(deltaPos.x*posDot*-1, deltaPos.y*posDot*-1);
 }
 
 //Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
@@ -172,14 +174,14 @@ function Player()
 		//Collision
 		game.physics.arcade.collide(this.gameObject, walls);
 		game.physics.arcade.collide(this.gameObject, otherPlayers);
-		game.physics.arcade.collide(this.gameObject, windGroup);
+		game.physics.arcade.overlap(this.gameObject, windGroup, windHitsThing);
 		
 		//Knife maintenance
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
 			{
-				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
+				game.physics.arcade.overlap(this.knife, windGroup, windHitsThing); //Todo: Consider replacing with overlap function or playing with mass values.
 				
 				if(game.physics.arcade.overlap(this.knife, otherPlayers, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
 				{
