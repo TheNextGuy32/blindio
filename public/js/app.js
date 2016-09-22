@@ -117,12 +117,11 @@ function throwKnife(player, posPoint, velPoint)
 	game.physics.enable(localPlayer.knife);
 	player.knife.checkWorldBounds = true;
 	player.knife.outOfBoundsKill = true;
-	player.knife.body.gravity.y = 0;
+	player.knife.body.immovable = true;
 	player.knife.scale.setTo(1/5, 1/5);
 	
 	player.knife.body.center = posPoint;
 	player.knife.body.velocity = velPoint;
-	player.knife.body.mass = 100;
 }
 
 //Overlap functions
@@ -140,16 +139,6 @@ function knifeHitsPlayer(knife, player)
 	player.destroy();
 }
 
-function windHitsThing(thing, wind)
-{
-	//Wind changes velocity, thing is unaffected
-	//Function should be used with players & knives, not walls.
-	
-	let deltaPos = new Phaser.Point(wind.body.position.x-thing.body.position.x, wind.body.position.y-thing.body.position.y);
-	let posDot = deltaPos.dot(Phaser.Point.normalize(wind.body.velocity));
-	wind.body.velocity.add(deltaPos.x*posDot*-1, deltaPos.y*posDot*-1);
-}
-
 //Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
 function Player()
 {
@@ -163,9 +152,8 @@ function Player()
 	{
 		this.gameObject = game.add.sprite(x, y, 'playerSprite');
 		game.physics.enable(this.gameObject);
-		this.gameObject.body.gravity.y = 0;
+		this.gameObject.body.immovable = true;
 		this.gameObject.body.collideWorldBounds = true;
-		this.gameObject.body.mass = 1000;
 		game.camera.follow(this.gameObject);
 	}
 	
@@ -173,17 +161,17 @@ function Player()
 	{
 		//Collision
 		game.physics.arcade.collide(this.gameObject, walls);
-		game.physics.arcade.collide(this.gameObject, otherPlayers);
-		game.physics.arcade.overlap(this.gameObject, windGroup, windHitsThing);
+		game.physics.arcade.collide(this.gameObject, otherPlayerGameObjects);
+		game.physics.arcade.collide(this.gameObject, windGroup);
 		
 		//Knife maintenance
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
 			{
-				game.physics.arcade.overlap(this.knife, windGroup, windHitsThing); //Todo: Consider replacing with overlap function or playing with mass values.
+				game.physics.arcade.collide(this.knife, windGroup);
 				
-				if(game.physics.arcade.overlap(this.knife, otherPlayers, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
+				if(game.physics.arcade.overlap(this.knife, otherPlayerGameObjects, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
 				{
 					this.knife.destroy();
 					this.knife = null;
@@ -191,29 +179,14 @@ function Player()
 			}
 			else
 			{
+				//Will be called primarily when knives have left game borders.
 				this.knife = null;
 			}
 		}
 		
 		//Movement
-		this.gameObject.body.velocity.x = 0;
-		this.gameObject.body.velocity.y = 0;
-		if(game.input.keyboard.isDown(MOVEMENT.LEFT))
-		{
-			this.gameObject.body.velocity.x -= this.moveSpeed;
-		}
-		if(game.input.keyboard.isDown(MOVEMENT.RIGHT))
-		{
-			this.gameObject.body.velocity.x += this.moveSpeed;
-		}
-		if(game.input.keyboard.isDown(MOVEMENT.UP))
-		{
-			this.gameObject.body.velocity.y -= this.moveSpeed;
-		}
-		if(game.input.keyboard.isDown(MOVEMENT.DOWN))
-		{
-			this.gameObject.body.velocity.y += this.moveSpeed;
-		}
+		this.gameObject.body.velocity.x = (game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*this.moveSpeed;
+		this.gameObject.body.velocity.y = (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*this.moveSpeed;
 	}
 	
 	this.throwKnife = function(pointer)
@@ -250,7 +223,7 @@ function NPC()
 			{
 				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
 				
-				if(game.physics.arcade.overlap(this.knife, otherPlayers) || game.physics.arcade.overlap(this.knife, walls)) //Knife cutting funcions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
+				if(game.physics.arcade.overlap(this.knife, otherPlayerGameObjects) || game.physics.arcade.overlap(this.knife, walls)) //Knife cutting funcions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
 				{
 					this.knife.destroy();
 					this.knife = null;
