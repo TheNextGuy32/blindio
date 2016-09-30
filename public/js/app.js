@@ -330,9 +330,10 @@ function WindTree(centerX, centerY, halfWidth, halfHeight, branchNum)
 		{
 			this.windGroup.push(newWind);
 			
-			if(this.windGroup.length+1 > maxWindBeforeSplitting)
+			if(this.windGroup.length+1 > maxWindBeforeSplitting && halfWidth > 5)
 			{
 				//We have no subtrees, but this branch will be over capacity if newWind is kept in. Time to branch.
+				//If the tree is too small (i.e. small enough that only one wind ought to fit in, which means that if we're branching now we won't stop), keep the wind in anyway. Terrible practice, but the game will crash otherwise.
 				this.branchTree();
 				while(this.windGroup.length > 0)
 				{
