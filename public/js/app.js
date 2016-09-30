@@ -1,7 +1,7 @@
 "use strict";
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windGroup;
+let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windQuadtree;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
@@ -15,9 +15,7 @@ Object.seal({
 
 //TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
 let windSpeed = 0;
-let windPhase = 0;
-let windDirection = 0;
-const breezeForce = 3;
+const breezeForce = 1.5;
 const breezeRotationSpeed = 0.00001;
 const breezeBackAndForthSpeed = 0.0001;
 
@@ -41,15 +39,17 @@ function create() {
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 	
 	let WIND_INTERVAL = 50;
-	windGroup = game.add.group();
-	windGroup.enableBody = true;
+	windQuadtree = new WindTree(game.world.centerX, game.world.centerY, WORLD_WIDTH/2, WORLD_HEIGHT/2, 0);
 	for(let x = WIND_INTERVAL/2; x < WORLD_WIDTH; x += WIND_INTERVAL)
 	{
 		for(let y = WIND_INTERVAL/2; y < WORLD_HEIGHT; y += WIND_INTERVAL)
 		{
-			let newWind = windGroup.create(x, y, 'playerSprite');
+			let newWind = game.add.sprite(x, y, 'playerSprite');
+			newWind.enableBody = true;
+			game.physics.enable(newWind);
 			newWind.scale.setTo(1/5, 1/5);
 			newWind.body.mass = 0.5;
+			windQuadtree.addWind(newWind);
 			//newWind.body.velocity.y = -5000;
 		}
 	}
@@ -86,26 +86,16 @@ function create() {
 }
 
 function update() {
-	//Collision groups
-	game.physics.arcade.collide(windGroup, walls);
 	
-	//Wind acceleration & world wrap
-	windDirection = (breezeRotationSpeed * game.time.time) % (2*Math.PI);//  What direction teh  wind is pointing
-	windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The bakc and worth sway of wind
-
+	//Wind acceleration calcs
+	let windDirection = (breezeRotationSpeed * game.time.time) % (2*Math.PI);//  What direction the wind is pointing
+	let windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The back and forth sway of wind
 	let windSpeed = Math.sin(windPhase) * breezeForce;
 	
-	windGroup.forEach(
-		function(particle) {
-			particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
-			particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
-		
-			game.world.wrap(particle);
-		}, this, true, null);
-	
-	//Updating things (for now just the player)
+	//Updating things
 	localPlayer.update();
 	otherPlayers.forEach(function(element, index, array){element.update();});
+	windQuadtree.updateWind(Math.cos(windDirection)*windSpeed, Math.sin(windDirection)*windSpeed);
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
@@ -162,15 +152,12 @@ function Player()
 		//Collision
 		game.physics.arcade.collide(this.gameObject, walls);
 		game.physics.arcade.collide(this.gameObject, otherPlayerGameObjects);
-		game.physics.arcade.collide(this.gameObject, windGroup);
 		
 		//Knife maintenance
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
 			{
-				game.physics.arcade.collide(this.knife, windGroup);
-				
 				if(game.physics.arcade.overlap(this.knife, otherPlayerGameObjects, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
 				{
 					this.knife.destroy();
@@ -275,4 +262,97 @@ function HUD()
 	}
 	
 	this.init();
+}
+
+function WindTree(centerX, centerY, halfWidth, halfHeight, branchNum)
+{
+	const maxWindBeforeSplitting = 10;
+	this.parentTree = null;
+	this.subTrees = [];
+	this.windGroup = [];
+	
+	this.intersectsTree = function(gameObjectToTest)
+	{
+		return !(gameObjectToTest.body.center.x+gameObjectToTest.body.width/2 < centerX-halfWidth || gameObjectToTest.body.center.x-gameObjectToTest.body.width/2 > centerX+halfWidth ||
+				 gameObjectToTest.body.center.y+gameObjectToTest.body.height/2 < centerY-halfHeight || gameObjectToTest.body.center.y-gameObjectToTest.body.height/2 > centerY+halfHeight);
+	}
+	
+	this.updateWind = function(deltaVelX, deltaVelY)
+	{
+		for(let i = 0; i < this.windGroup.length; i++)
+		{
+			//change wind velocity
+			this.windGroup[i].body.velocity.x += deltaVelX;
+			this.windGroup[i].body.velocity.y += deltaVelY;
+			game.world.wrap(this.windGroup[i]);
+			
+			//do collisions: knife (for now just local player's, eventually everyone's), walls, then other winds in this bit of the tree.
+			game.physics.arcade.collide(this.windGroup[i], localPlayer.knife);
+			game.physics.arcade.collide(this.windGroup[i], localPlayer.gameObject);
+			game.physics.arcade.collide(this.windGroup[i], walls);
+			//Originally this loop just tested against every wind prior to i (so that each pair is only tested once), but when that failed to work properly it was expanded to the full array. Bug squashed?
+			for(let h = 0; h < this.windGroup.length; h++)
+			{
+				game.physics.arcade.collide(this.windGroup[i], this.windGroup[h]);
+			}
+			
+			//Check if wind particle is in box
+			if(!this.intersectsTree(this.windGroup[i]) && this.parentTree != null)
+			{
+				//if not, remove from array and add to parent tree
+				this.parentTree.addWind((this.windGroup.splice(i, 1)[0]));
+				i--;
+			}
+		}
+		//And repeat for each subtree.
+		this.subTrees.forEach(function(element, index, array){element.updateWind(deltaVelX, deltaVelY);});
+	}
+	
+	this.addWind = function(newWind)
+	{
+		//if newWind isn't in treebox, we don't care about it.
+		if(!this.intersectsTree(newWind))
+		{
+			return;
+		}
+		
+		if(this.subTrees.length > 0)
+		{
+			//We have subtrees, therefore anything stored in this branch is redundant at best.
+			this.subTrees.forEach(function(element, index, array){element.addWind(newWind);});
+		}
+		else
+		{
+			this.windGroup.push(newWind);
+			
+			if(this.windGroup.length+1 > maxWindBeforeSplitting)
+			{
+				//We have no subtrees, but this branch will be over capacity if newWind is kept in. Time to branch.
+				this.branchTree();
+				while(this.windGroup.length > 0)
+				{
+					let windToRelocate = this.windGroup.splice(0, 1)[0];
+					for(let i = 0; i < this.subTrees.length; i++)
+					{
+						this.subTrees[i].addWind(windToRelocate);
+					}
+				}
+			}
+		}
+	}
+	
+	//should be private and/or just inside the addWind function, but whatever.
+	this.branchTree = function()
+	{
+		const quarterWidth = halfWidth/2;
+		const quarterHeight = halfHeight/2;
+		this.subTrees.push(new WindTree(centerX-quarterWidth, centerY-quarterHeight, quarterWidth, quarterHeight, branchNum+1));
+		this.subTrees.push(new WindTree(centerX+quarterWidth, centerY-quarterHeight, quarterWidth, quarterHeight, branchNum+1));
+		this.subTrees.push(new WindTree(centerX-quarterWidth, centerY+quarterHeight, quarterWidth, quarterHeight, branchNum+1));
+		this.subTrees.push(new WindTree(centerX+quarterWidth, centerY+quarterHeight, quarterWidth, quarterHeight, branchNum+1));
+		for(let i = 0; i < this.subTrees.length; i++)
+		{
+			this.subTrees[i].parentTree = this;
+		}
+	}
 }
