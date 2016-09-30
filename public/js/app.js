@@ -1,7 +1,7 @@
 "use strict";
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windQuadtree;
+let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windQuadtree, windArray;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
@@ -40,6 +40,7 @@ function create() {
 	
 	let WIND_INTERVAL = 50;
 	windQuadtree = new WindTree(game.world.centerX, game.world.centerY, WORLD_WIDTH/2, WORLD_HEIGHT/2, 0);
+	windArray = [];
 	for(let x = WIND_INTERVAL/2; x < WORLD_WIDTH; x += WIND_INTERVAL)
 	{
 		for(let y = WIND_INTERVAL/2; y < WORLD_HEIGHT; y += WIND_INTERVAL)
@@ -50,6 +51,7 @@ function create() {
 			newWind.scale.setTo(1/5, 1/5);
 			newWind.body.mass = 0.5;
 			windQuadtree.addWind(newWind);
+			windArray.push(newWind);
 			//newWind.body.velocity.y = -5000;
 		}
 	}
@@ -92,10 +94,22 @@ function update() {
 	let windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The back and forth sway of wind
 	let windSpeed = Math.sin(windPhase) * breezeForce;
 	
+	let windVelDeltaX = Math.cos(windDirection)*windSpeed;
+	let windVelDeltaY = Math.sin(windDirection)*windSpeed;
+	windArray.forEach(function(element, index, array)
+	{
+		element.body.velocity.x += windVelDeltaX;
+		element.body.velocity.y += windVelDeltaY;
+		game.world.wrap(element);
+		game.physics.arcade.collide(element, localPlayer.knife);
+		game.physics.arcade.collide(element, localPlayer.gameObject);
+		game.physics.arcade.collide(element, walls);
+	});
+	
 	//Updating things
 	localPlayer.update();
 	otherPlayers.forEach(function(element, index, array){element.update();});
-	windQuadtree.updateWind(Math.cos(windDirection)*windSpeed, Math.sin(windDirection)*windSpeed);
+	windQuadtree.updateWind();
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
@@ -277,19 +291,10 @@ function WindTree(centerX, centerY, halfWidth, halfHeight, branchNum)
 				 gameObjectToTest.body.center.y+gameObjectToTest.body.height/2 < centerY-halfHeight || gameObjectToTest.body.center.y-gameObjectToTest.body.height/2 > centerY+halfHeight);
 	}
 	
-	this.updateWind = function(deltaVelX, deltaVelY)
+	this.updateWind = function()
 	{
 		for(let i = 0; i < this.windGroup.length; i++)
 		{
-			//change wind velocity
-			this.windGroup[i].body.velocity.x += deltaVelX;
-			this.windGroup[i].body.velocity.y += deltaVelY;
-			game.world.wrap(this.windGroup[i]);
-			
-			//do collisions: knife (for now just local player's, eventually everyone's), walls, then other winds in this bit of the tree.
-			game.physics.arcade.collide(this.windGroup[i], localPlayer.knife);
-			game.physics.arcade.collide(this.windGroup[i], localPlayer.gameObject);
-			game.physics.arcade.collide(this.windGroup[i], walls);
 			//Originally this loop just tested against every wind prior to i (so that each pair is only tested once), but when that failed to work properly it was expanded to the full array. Bug squashed?
 			for(let h = 0; h < this.windGroup.length; h++)
 			{
@@ -305,7 +310,7 @@ function WindTree(centerX, centerY, halfWidth, halfHeight, branchNum)
 			}
 		}
 		//And repeat for each subtree.
-		this.subTrees.forEach(function(element, index, array){element.updateWind(deltaVelX, deltaVelY);});
+		this.subTrees.forEach(function(element, index, array){element.updateWind();});
 	}
 	
 	this.addWind = function(newWind)
