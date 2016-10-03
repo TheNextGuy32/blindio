@@ -1,7 +1,7 @@
 "use strict";
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let localPlayer, displayHandler, otherPlayers, otherPlayerGameObjects, cursors, walls, knifeStatusText, fpsText, windGroup;
+let displayHandler, players, walls, windGroup;
 //Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
@@ -40,6 +40,7 @@ function create() {
     game.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'skyBackground');
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 	
+/*
 	let WIND_INTERVAL = 50;
 	windGroup = game.add.group();
 	windGroup.enableBody = true;
@@ -53,17 +54,19 @@ function create() {
 			//newWind.body.velocity.y = -5000;
 		}
 	}
+*/
 	
-	localPlayer = new Player();
-	localPlayer.init(game.world.width/2, game.world.height/2, "Player");	//Todo: Update function to feature random-ish starting locations, player name as seen by server
+	players = [];
+	//Local player is always at index 0
+	players.push(new GameCharacter());
+	players[0].init(game.world.width/2, game.world.height/2, "Local Player");
+	game.camera.follow(players[0].gameObject);
 	
-	otherPlayerGameObjects = game.add.group();
-	otherPlayerGameObjects.enableBody = true;
-	otherPlayers = [];
-	otherPlayers.push(new NPC());
-	otherPlayers[0].init(3*game.world.width/4, game.world.height/3, "CPU Player #1", otherPlayerGameObjects);
-	otherPlayers.push(new NPC());
-	otherPlayers[1].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2", otherPlayerGameObjects);
+	//Adding NPCs -- dummy characters for now, networked players later.
+	players.push(new GameCharacter());
+	players[1].init(3*game.world.width/4, game.world.height/3, "CPU Player #1");
+	players.push(new GameCharacter());
+	players[2].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2");
 
 
 	walls = game.add.group();
@@ -82,10 +85,11 @@ function create() {
 	
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
-	game.input.onDown.add(localPlayer.throwKnife, localPlayer);
+	game.input.onDown.add(players[0].throwKnifeAtPointer, players[0]);
 }
 
 function update() {
+/*
 	//Collision groups
 	game.physics.arcade.collide(windGroup, walls);
 	
@@ -102,10 +106,15 @@ function update() {
 		
 			game.world.wrap(particle);
 		}, this, true, null);
+*/
+	//Player input handling
+	let moveSpeed = 300;
+	players[0].setVelocity((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
+						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
 	
 	//Updating things (for now just the player)
-	localPlayer.update();
-	otherPlayers.forEach(function(element, index, array){element.update();});
+//	localPlayer.update();
+	players.forEach(function(element, index, array){element.update();});
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
@@ -114,7 +123,7 @@ function update() {
 function throwKnife(player, posPoint, velPoint)
 {
 	player.knife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
-	game.physics.enable(localPlayer.knife);
+	game.physics.enable(player.knife);
 	player.knife.checkWorldBounds = true;
 	player.knife.outOfBoundsKill = true;
 	player.knife.body.immovable = true;
@@ -140,78 +149,17 @@ function knifeHitsPlayer(knife, player)
 }
 
 //Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
-function Player()
+function GameCharacter()
 {
-	this.name = "Unassigned Player";
+	this.name = "Nameless Player";
 	this.knife = null;
-	this.moveSpeed = 300;
-	this.knifeSpeed = 800;
 	this.gameObject;
 	
 	this.init = function(x, y, name)
 	{
 		this.gameObject = game.add.sprite(x, y, 'playerSprite');
 		game.physics.enable(this.gameObject);
-		this.gameObject.body.immovable = true;
 		this.gameObject.body.collideWorldBounds = true;
-		game.camera.follow(this.gameObject);
-	}
-	
-	this.update = function()
-	{
-		//Collision
-		game.physics.arcade.collide(this.gameObject, walls);
-		game.physics.arcade.collide(this.gameObject, otherPlayerGameObjects);
-		game.physics.arcade.collide(this.gameObject, windGroup);
-		
-		//Knife maintenance
-		if(this.knife != null)
-		{
-			if(this.knife.alive)
-			{
-				game.physics.arcade.collide(this.knife, windGroup);
-				
-				if(game.physics.arcade.overlap(this.knife, otherPlayerGameObjects, knifeHitsPlayer) || game.physics.arcade.overlap(this.knife, walls))
-				{
-					this.knife.destroy();
-					this.knife = null;
-				}
-			}
-			else
-			{
-				//Will be called primarily when knives have left game borders.
-				this.knife = null;
-			}
-		}
-		
-		//Movement
-		this.gameObject.body.velocity.x = (game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*this.moveSpeed;
-		this.gameObject.body.velocity.y = (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*this.moveSpeed;
-	}
-	
-	this.throwKnife = function(pointer)
-	{
-		if(this.knife) //Safeguarding against null value of knife
-		{
-			console.log("Error: Trying to throw a knife while one is already out");
-			return;
-		}
-	
-		let knifeVel = new Phaser.Point(pointer.position.x-(this.gameObject.body.center.x-game.camera.position.x), pointer.position.y-(this.gameObject.body.center.y-game.camera.position.y));
-		knifeVel.setMagnitude(this.knifeSpeed);
-	
-		throwKnife(this, this.gameObject.body.center, knifeVel);
-	}
-}
-
-function NPC()
-{
-	this.name = "Unassigned player";
-	this.knife = null;
-	this.gameObject;
-	this.init = function(x, y, name, group)
-	{
-		this.gameObject = group.create(x, y, 'playerSprite');
 		this.name = name;
 	}
 	
@@ -223,10 +171,23 @@ function NPC()
 			{
 				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
 				
-				if(game.physics.arcade.overlap(this.knife, otherPlayerGameObjects) || game.physics.arcade.overlap(this.knife, walls)) //Knife cutting funcions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
+				if(game.physics.arcade.overlap(this.knife, walls)) //Knife cutting functions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
 				{
 					this.knife.destroy();
 					this.knife = null;
+				}
+				else
+				{
+					for(let i = 0; i < players.length; i++)
+					{
+						if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
+						{
+							players[i].gameObject.destroy(); //TODO: Replace this with something better
+							this.knife.destroy();
+							this.knife = null;
+							break;
+						}
+					}
 				}
 			}
 			else
@@ -236,20 +197,35 @@ function NPC()
 		}
 	}
 	
-	this.changeVelocity = function(newVel)
+	this.throwKnifeAtPointer = function(pointer)
 	{
-		this.gameObject.body.velocity = newVel;
-	}
-	
-	this.changePosition = function(newPos)
-	{
-		this.gameObject.body.position = newPos;
-	}
-	
-	this.throwKnife = function(vel)
-	{
+		if(this.knife) //Safeguarding against null value of knife
+		{
+			console.log("Error: Trying to throw a knife while one is already out");
+			return;
+		}
+
+		let knifeVel = new Phaser.Point(pointer.position.x-(this.gameObject.body.center.x-game.camera.position.x), pointer.position.y-(this.gameObject.body.center.y-game.camera.position.y));
+		knifeVel.setMagnitude(800);
+
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
+	
+	this.throwKnife = function(vel){throwKnife(this, this.gameObject.body.center, knifeVel);}
+	
+	this.setVelocity = function(newX, newY)
+	{
+		this.gameObject.body.velocity.x = newX;
+		this.gameObject.body.velocity.y = newY;
+	}
+	this.setPosition = function(newX, newY)
+	{
+		this.gameObject.body.position.x = newX;
+		this.gameObject.body.position.y = newY;
+	}
+	this.getVelocity = function(){return this.gameObject.body.velocity;}
+	this.getPosition = function(){return this.gameObject.body.position;}
+	this.getName = function(){return this.name;}
 }
 
 function HUD()
@@ -267,7 +243,7 @@ function HUD()
 	{
 		this.knifeStatusText.position.x = game.camera.position.x+7;
 		this.knifeStatusText.position.y = game.camera.position.y+10;
-		this.knifeStatusText.text = "Throwable Knife: "+(localPlayer.knife == null);
+		this.knifeStatusText.text = "Throwable Knife: "+(players[0].knife == null);
 	
 		this.fpsText.position.x = game.camera.position.x+7;
 		this.fpsText.position.y = game.camera.position.y+675;
