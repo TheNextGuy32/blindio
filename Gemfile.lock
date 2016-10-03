@@ -10,6 +10,7 @@ GEM
     faker (1.6.6)
       i18n (~> 0.5)
     i18n (0.7.0)
+    json (2.0.2)
     puma (3.6.0)
     rack (1.6.4)
     rack-protection (1.5.3)
@@ -33,6 +34,7 @@ PLATFORMS
 
 DEPENDENCIES
   faker
+  json
   puma
   sinatra
   sinatra-websocket

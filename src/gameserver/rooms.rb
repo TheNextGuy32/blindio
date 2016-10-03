@@ -1,20 +1,4 @@
 class GameServer
- 
-  def initialize
-    @rooms = []
-    @connectedPlayers = {}
-  end
-
-  def deletePlayer(ws)
-    @connectedPlayers.delete(ws)
-    puts "Deleting the player didn't work." if @connectedPlayers.key?(ws)
-  end
-
-  def addPlayer(player)
-    @connectedPlayers[player.ws] = player
-    puts "Now managing player named #{ player.name }"
-  end
-
   def joinRandomRoom(player)
     getOpenRoom.addPlayer(player)
   end
@@ -41,5 +25,4 @@ class GameServer
     message
   end
 
-  
 end
