@@ -57,16 +57,12 @@ function create() {
 */
 	
 	players = [];
-	//Local player is always at index 0
-	players.push(new GameCharacter());
-	players[0].init(game.world.width/2, game.world.height/2, "Local Player");
+	players.push(new LocalPlayer(game.world.width/2, game.world.height/2, "Local Player"));
 	game.camera.follow(players[0].gameObject);
 	
 	//Adding NPCs -- dummy characters for now, networked players later.
-	players.push(new GameCharacter());
-	players[1].init(3*game.world.width/4, game.world.height/3, "CPU Player #1");
-	players.push(new GameCharacter());
-	players[2].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2");
+	players.push(new GameCharacter(3*game.world.width/4, game.world.height/3, "CPU Player #1"));
+	players.push(new GameCharacter(game.world.width/4, 2*game.world.height/3, "CPU Player #2"));
 
 
 	walls = game.add.group();
@@ -85,7 +81,6 @@ function create() {
 	
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
-	game.input.onDown.add(players[0].throwKnifeAtPointer, players[0]);
 }
 
 function update() {
@@ -107,13 +102,8 @@ function update() {
 			game.world.wrap(particle);
 		}, this, true, null);
 */
-	//Player input handling
-	let moveSpeed = 300;
-	players[0].setVelocity((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
-						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
-	
-	//Updating things (for now just the player)
-//	localPlayer.update();
+
+	//Updating things
 	players.forEach(function(element, index, array){element.update();});
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
@@ -146,25 +136,30 @@ function knifeHitsPlayer(knife, player)
 	console.log("YOU KNIFED A PLAYER");
 //	knife.destroy(); //See knifeHitsWall.
 	player.destroy();
+	//todo: Update killFeed with name of knifed player (Also todo: figure out either how to get the player name through knife or pass the whole player in here)
 }
 
-//Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
-function GameCharacter()
+class GameCharacter
 {
-	this.name = "Nameless Player";
-	this.knife = null;
-	this.gameObject;
+	/*
+	Member variables:
+		name
+		knife
+		gameObject
+	*/
 	
-	this.init = function(x, y, name)
+	constructor(x, y, name)
 	{
+		this.knife = null;
 		this.gameObject = game.add.sprite(x, y, 'playerSprite');
 		game.physics.enable(this.gameObject);
 		this.gameObject.body.collideWorldBounds = true;
 		this.name = name;
 	}
 	
-	this.update = function()
+	update()
 	{
+		game.physics.arcade.collide(this.gameObject, walls);
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
@@ -197,7 +192,40 @@ function GameCharacter()
 		}
 	}
 	
-	this.throwKnifeAtPointer = function(pointer)
+	throwKnife(vel){throwKnife(this, this.gameObject.body.center, vel);}
+	
+	
+	get Velocity(){return this.gameObject.body.velocity;}
+	set Velocity(velPoint) //should be Phaser.Point
+	{
+		this.gameObject.body.velocity = velPoint;
+	}
+	get Position(){return this.gameObject.body.position;}
+	set Position(posPoint) //should be Phaser.Point
+	{
+		this.gameObject.body.position = posPoint;
+	}
+	get Name(){return this.name;}
+}
+
+class LocalPlayer extends GameCharacter
+{
+	constructor(x, y, name)
+	{
+		super(x, y, name);
+		game.input.onDown.add(this.throwKnifeAtPointer, this);
+	}
+
+	update()
+	{
+		super.update();
+		
+		let moveSpeed = 300;
+		this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
+						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
+	}
+
+	throwKnifeAtPointer(pointer)
 	{
 		if(this.knife) //Safeguarding against null value of knife
 		{
@@ -210,24 +238,9 @@ function GameCharacter()
 
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
-	
-	this.throwKnife = function(vel){throwKnife(this, this.gameObject.body.center, knifeVel);}
-	
-	this.setVelocity = function(newX, newY)
-	{
-		this.gameObject.body.velocity.x = newX;
-		this.gameObject.body.velocity.y = newY;
-	}
-	this.setPosition = function(newX, newY)
-	{
-		this.gameObject.body.position.x = newX;
-		this.gameObject.body.position.y = newY;
-	}
-	this.getVelocity = function(){return this.gameObject.body.velocity;}
-	this.getPosition = function(){return this.gameObject.body.position;}
-	this.getName = function(){return this.name;}
 }
 
+//This is probably unimportant enough to stay as a function-class
 function HUD()
 {
 	this.knifeStatusText;
