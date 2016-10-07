@@ -1,5 +1,4 @@
-
-
+const phaser = require("phaser");
 // const player = require('./player.js');
 // const players = {};
 
