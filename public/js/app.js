@@ -272,18 +272,16 @@ function HUD()
 	
 	this.init = function()
 	{
-		this.knifeStatusText = game.add.text(0, 0, "");
-		this.fpsText = game.add.text(0, 0, "");
+		this.knifeStatusText = game.add.text(7, 10, "");
+		this.knifeStatusText.fixedToCamera = true;
+		this.fpsText = game.add.text(7, 675, "");
+		this.fpsText.fixedToCamera = true;
 	}
 	
 	this.update = function()
 	{
-		this.knifeStatusText.position.x = game.camera.position.x+7;
-		this.knifeStatusText.position.y = game.camera.position.y+10;
 		this.knifeStatusText.text = "Throwable Knife: "+(players[0].knife == null);
 	
-		this.fpsText.position.x = game.camera.position.x+7;
-		this.fpsText.position.y = game.camera.position.y+675;
 		this.fpsText.text = game.time.fps+" FPS";
 	}
 	
