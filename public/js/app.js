@@ -123,22 +123,6 @@ function throwKnife(player, posPoint, velPoint)
 	player.knife.body.velocity = velPoint;
 }
 
-//Overlap functions
-function knifeHitsWall(knife, wall)
-{
-	console.log("YOU KNIFED A WALL");
-//	knife.destroy(); //This is dangerous when we're dealing with sprite-vs-group overlaps, so I'm using the bool the overlap test returns to destroy the knife in the player's update.
-	//This function isn't being called, since it does absolutely nothing at the moment, but I'm leaving it here in case we want to do something with it. Play a sound, for instance.
-}
-
-function knifeHitsPlayer(knife, player)
-{
-	console.log("YOU KNIFED A PLAYER");
-//	knife.destroy(); //See knifeHitsWall.
-	player.destroy();
-	//todo: Update killFeed with name of knifed player (Also todo: figure out either how to get the player name through knife or pass the whole player in here)
-}
-
 class GameCharacter
 {
 	/*
@@ -160,6 +144,11 @@ class GameCharacter
 	update()
 	{
 		game.physics.arcade.collide(this.gameObject, walls);
+		for(let i = 0; i < players.length && players[i] != this; i++)
+		{
+			game.physics.arcade.collide(this.gameObject, players[i].gameObject);
+		}
+		
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
@@ -177,7 +166,8 @@ class GameCharacter
 					{
 						if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
 						{
-							players[i].gameObject.destroy(); //TODO: Replace this with something better
+							players[i].killCharacter();
+							//TODO: Send "players[i].name killed by this.name" message, increment score, etc
 							this.knife.destroy();
 							this.knife = null;
 							break;
@@ -190,6 +180,40 @@ class GameCharacter
 				this.knife = null;
 			}
 		}
+	}
+	
+	killCharacter()
+	{
+		this.gameObject.destroy();
+		
+		let timeBeforeRespawn = 3000; //measured in ms
+		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
+		
+		console.log(this.name+" IS DEAD");
+	}
+	
+	static respawnCharacter(charToRespawn)
+	{
+		//TODO: This, but better
+		let newPosX = Math.random()*game.world.width;
+		let newPosY = Math.random()*game.world.height;
+		
+		charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
+		game.physics.enable(charToRespawn.gameObject);
+		charToRespawn.gameObject.body.collideWorldBounds = true;
+		
+		//Prevents spawning inside walls - does not work right now.
+		/*while(game.physics.arcade.overlap(charToRespawn.gameObject, walls))
+		{
+			console.log("MOVING OUT OF A WALL");
+			newPosX = Math.random()*game.world.width;
+			newPosY = Math.random()*game.world.height;
+			
+			charToRespawn.gameObject.x = *game.world.width;
+			charToRespawn.gameObject.y = Math.random()*game.world.height;
+		}*/
+		
+		console.log(charToRespawn.name+" LIVES AGAIN AT ", charToRespawn.gameObject.body.position);
 	}
 	
 	throwKnife(vel){throwKnife(this, this.gameObject.body.center, vel);}
