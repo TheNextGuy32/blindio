@@ -1,29 +1,45 @@
-const phaser = require("phaser");
-// const player = require('./player.js');
-// const players = {};
+const Room = require('room.js');
 
-// //  Creating player
-// const createPlayer = (id) => {
-//   //players[id] = new Player(0, 0);
-// };
+module.exports = class GameServer {
 
-// //  Sending game state
-// const outputRate = 1000 / 10;
-// const sendPlayerData = () => {
-//   socket.broadcast.to('room').emit('playerInfo', players);
-// };
-// setInterval(sendPlayerData, outputRate);
+  constructor() {
+    this.rooms = {};
+    this.roomCount = 0;
 
-// //  Processing velocities
-// const dt = 1000 / 60;
-// const update = () => {
-//   for (player in player) {
-//     player.update(dt);
-//   }
-// };
-// setInterval(update, dt);
+    createNewRoom(this.roomCount);
+  }
 
-// //  Getting input from client
-// const processInput = (ws, input) => {
-//   players[ws].input = input;
-// };
+  get getOpenRoom () {
+    for (let roomName in this.rooms) {
+      let room = this.rooms[roomName];
+      if (room.getOpenSpots() >= 1) {
+        return room;
+      }
+    }
+    return createNewRoom;
+  }
+  createNewRoom (id) {
+    const room = new Room(id,8);
+    this.rooms[room.name] = room;
+    
+    this.roomCount ++;
+    
+    return room;
+  }
+  joinRoom(ws) {
+    const room = getOpenRoom();
+    room.joinRoom(ws);
+    ws.room = room;
+  }
+  leaveRoom(ws) {
+    const room = ws.room;
+    room.leaveRoom(ws);
+
+    //  The room is now empty, delete it
+    //  If its the last room dont delete
+    if(room.numberPlayers() == 0) {
+      this.roomCount--;
+      delete this.rooms[room.name];
+    }
+  }
+}
