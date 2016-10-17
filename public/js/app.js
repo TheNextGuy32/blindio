@@ -190,30 +190,38 @@ class GameCharacter
 		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
 		
 		console.log(this.name+" IS DEAD");
+		displayHandler.addNotification(this.name+" IS DEAD");
 	}
 	
 	static respawnCharacter(charToRespawn)
 	{
-		//TODO: This, but better
-		let newPosX = Math.random()*game.world.width;
-		let newPosY = Math.random()*game.world.height;
+		let newPosX = 0;
+		let newPosY = 0;
+		//Keeping these as variables seems like a bad idea, but it lets us run the calculations before spawning a player gameobject.
+		//We should be fine as long as player GOs keep their size consistent.
+		const charWidth = 50;
+		const charHeight = 50;
+		
+		let isValidPos = false;
+		do
+		{
+			newPosX = Math.random()*game.world.width;
+			newPosY = Math.random()*game.world.height;
+			
+			for(let i = 0; i < walls.length; i++)
+			{
+				let currentWall = walls.getAt(i);
+				isValidPos = isValidPos ||
+					!(newPosX+charWidth > currentWall.x &&
+					newPosX < currentWall.x+currentWall.width &&
+					newPosY+charHeight > currentWall.y &&
+					newPosY < currentWall.y+currentWall.height);
+			}
+		}while(!isValidPos)
 		
 		charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
 		game.physics.enable(charToRespawn.gameObject);
 		charToRespawn.gameObject.body.collideWorldBounds = true;
-		
-		//Prevents spawning inside walls - does not work right now.
-		/*while(game.physics.arcade.overlap(charToRespawn.gameObject, walls))
-		{
-			console.log("MOVING OUT OF A WALL");
-			newPosX = Math.random()*game.world.width;
-			newPosY = Math.random()*game.world.height;
-			
-			charToRespawn.gameObject.x = *game.world.width;
-			charToRespawn.gameObject.y = Math.random()*game.world.height;
-		}*/
-		
-		console.log(charToRespawn.name+" LIVES AGAIN AT ", charToRespawn.gameObject.body.position);
 	}
 	
 	throwKnife(vel){throwKnife(this, this.gameObject.body.center, vel);}
@@ -269,13 +277,25 @@ function HUD()
 {
 	this.knifeStatusText;
 	this.fpsText;
+	this.eventLogText;
+	
+	this.eventStringArray;
 	
 	this.init = function()
 	{
 		this.knifeStatusText = game.add.text(7, 10, "");
 		this.knifeStatusText.fixedToCamera = true;
+		
 		this.fpsText = game.add.text(7, 675, "");
 		this.fpsText.fixedToCamera = true;
+		
+		this.eventStringArray = [];
+		this.eventLogText = game.add.text(game.camera.width/2, 10, "");
+		this.eventLogText.fixedToCamera = true;
+		this.eventLogText.wordWrap = true;
+		this.eventLogText.wordWrapWidth = game.camera.width/2-7;
+		this.eventLogText.boundsAlignH = 'right'; //Todo: Make this work
+		this.eventLogText.align = 'right';
 	}
 	
 	this.update = function()
@@ -283,6 +303,30 @@ function HUD()
 		this.knifeStatusText.text = "Throwable Knife: "+(players[0].knife == null);
 	
 		this.fpsText.text = game.time.fps+" FPS";
+	}
+	
+	this.addNotification = function(newEventString)
+	{
+		this.eventStringArray.push(newEventString);
+		this.rewriteEventLogText();
+		
+		let timeBeforeRemoval = 3000;
+		setTimeout(this.removeOldestNotification, timeBeforeRemoval, this);
+	}
+	
+	this.removeOldestNotification = function(ObjectToRemove)
+	{
+		ObjectToRemove.eventStringArray.shift();
+		ObjectToRemove.rewriteEventLogText();
+	}
+	
+	this.rewriteEventLogText = function()
+	{
+		this.eventLogText.text = "";
+		for(let i = 0; i < this.eventStringArray.length; i++)
+		{
+			this.eventLogText.text += this.eventStringArray[i]+"\n";
+		}
 	}
 	
 	this.init();
