@@ -2,8 +2,7 @@ const express = require('express');
 const path = require('path');
 // const enrouten = require('express-enrouten');
 
-const Player = require('player.js');
-const GameServer = require('gameserver.js')
+const GameServer = require('./gameserver.js')
 
 const app = express();
 const server = require('http').Server(app);

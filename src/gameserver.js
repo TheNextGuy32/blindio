@@ -1,4 +1,4 @@
-const Room = require('room.js');
+const Room = require('./room.js');
 
 module.exports = class GameServer {
 

@@ -1,1 +1,1 @@
-web: ruby app.rb
+web: node -use-strict ./src/server.js

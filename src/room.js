@@ -1,6 +1,9 @@
-const phaser = require('phaser');
+const p2 = require('p2');
 
-let game, players, knives, walls;
+let world;
+let players =[];
+let knives = [];
+let walls = [];
 
 const windSpeed = 0;
 const windPhase = 0;
@@ -44,19 +47,20 @@ module.exports = class Room {
 }
 
 function create() {
-  game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload, create, update });
+  world = new p2.World({
 
-  game.time.advancedTiming = true;
-  game.physics.startSystem(Phaser.Physics.ARCADE);
-
-  game.world.setBounds(0, 0, 2000, 2000);
-
-  players = game.add.group();
-  players.enableBody = true;
-
-  walls = game.add.group();
-  walls.enableBody = true;
-}
+  });
+  var circleBody = new p2.Body({
+      position: [0, 10]
+  });
+  circleBody.addShape(new p2.Circle({ radius: 1 }));
+  world.addBody(circleBody);
+   
+  var timeStep = 1 / 60;
+   
+  // The "Game loop". Could be replaced by, for example, requestAnimationFrame. 
+  setInterval(update, 1000 * timeStep);
+  }
 
 function preload() {
 
@@ -70,6 +74,8 @@ function createPlayer() {
 }
 
 function update() {
+  world.step(timeStep);
+
   game.physics.arcade.collide(players, walls);
   game.physics.arcade.collide(players, players);
   game.physics.arcade.overlap(knives, walls, destroyFirstThing, null, this);
