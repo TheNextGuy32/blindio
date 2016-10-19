@@ -11,6 +11,14 @@ Object.seal({
     RIGHT: Phaser.Keyboard.D,
     UP: Phaser.Keyboard.W,
     DOWN: Phaser.Keyboard.S,
+	DEBUGKEY_CPULEFT: Phaser.Keyboard.J,
+	DEBUGKEY_CPURIGHT: Phaser.Keyboard.L,
+	DEBUGKEY_CPUUP: Phaser.Keyboard.I,
+	DEBUGKEY_CPUDOWN: Phaser.Keyboard.K,
+	DEBUGKEY_CPUKNIFELEFT: Phaser.Keyboard.LEFT,
+	DEBUGKEY_CPUKNIFERIGHT: Phaser.Keyboard.RIGHT,
+	DEBUGKEY_CPUKNIFEUP: Phaser.Keyboard.UP,
+	DEBUGKEY_CPUKNIFEDOWN: Phaser.Keyboard.DOWN,
 });
 
 //TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
@@ -58,7 +66,6 @@ function create() {
 	
 	players = [];
 	players.push(new LocalPlayer(game.world.width/2, game.world.height/2, "Local Player"));
-	game.camera.follow(players[0].gameObject);
 	
 	//Adding NPCs -- dummy characters for now, networked players later.
 	players.push(new GameCharacter(3*game.world.width/4, game.world.height/3, "CPU Player #1"));
@@ -104,7 +111,22 @@ function update() {
 */
 
 	//Updating things
-	players.forEach(function(element, index, array){element.update();});
+	players.forEach(function(element, index, array){
+		element.update();
+		if(index != 0 && element.gameObject.alive)
+		{
+			element.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPURIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPULEFT))*300,
+						   (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUUP))*300);
+						   
+			if(game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP))
+			{
+				let knifeVelPoint = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT)),
+						   (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP)));
+				knifeVelPoint.setMagnitude(800);
+				element.throwKnife(knifeVelPoint);
+			}
+		}
+	});
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
 	displayHandler.update();
@@ -224,7 +246,14 @@ class GameCharacter
 		charToRespawn.gameObject.body.collideWorldBounds = true;
 	}
 	
-	throwKnife(vel){throwKnife(this, this.gameObject.body.center, vel);}
+	throwKnife(vel)
+	{
+		//Might cause sync issues - reexamine later.
+		if(!this.knife)
+		{
+			throwKnife(this, this.gameObject.body.center, vel);
+		}
+	}
 	
 	
 	get Velocity(){return this.gameObject.body.velocity;}
@@ -245,6 +274,7 @@ class LocalPlayer extends GameCharacter
 	constructor(x, y, name)
 	{
 		super(x, y, name);
+		game.camera.follow(this.gameObject);
 		game.input.onDown.add(this.throwKnifeAtPointer, this);
 	}
 
@@ -253,8 +283,11 @@ class LocalPlayer extends GameCharacter
 		super.update();
 		
 		let moveSpeed = 300;
-		this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
-						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
+		if(this.gameObject.alive)
+		{
+			this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
+							(game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
+		}
 	}
 
 	throwKnifeAtPointer(pointer)
@@ -269,6 +302,25 @@ class LocalPlayer extends GameCharacter
 		knifeVel.setMagnitude(800);
 
 		throwKnife(this, this.gameObject.body.center, knifeVel);
+	}
+	
+	killCharacter()
+	{
+		this.gameObject.destroy();
+		
+		let timeBeforeRespawn = 3000; //measured in ms
+		setTimeout(LocalPlayer.respawnCharacter, timeBeforeRespawn, this);
+		
+		displayHandler.addNotification(this.name+" IS DEAD");
+		displayHandler.addNotification("RESPAWNING IN 3...");
+		setTimeout(function(){displayHandler.addNotification("RESPAWNING IN 2...");}, 1000, this);
+		setTimeout(function(){displayHandler.addNotification("RESPAWNING IN 1...");}, 2000, this);
+	}
+	
+	static respawnCharacter(charToRespawn)
+	{
+		GameCharacter.respawnCharacter(charToRespawn);
+		game.camera.follow(charToRespawn.gameObject);
 	}
 }
 
