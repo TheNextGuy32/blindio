@@ -57,16 +57,12 @@ function create() {
 */
 	
 	players = [];
-	//Local player is always at index 0
-	players.push(new GameCharacter());
-	players[0].init(game.world.width/2, game.world.height/2, "Local Player");
+	players.push(new LocalPlayer(game.world.width/2, game.world.height/2, "Local Player"));
 	game.camera.follow(players[0].gameObject);
 	
 	//Adding NPCs -- dummy characters for now, networked players later.
-	players.push(new GameCharacter());
-	players[1].init(3*game.world.width/4, game.world.height/3, "CPU Player #1");
-	players.push(new GameCharacter());
-	players[2].init(game.world.width/4, 2*game.world.height/3, "CPU Player #2");
+	players.push(new GameCharacter(3*game.world.width/4, game.world.height/3, "CPU Player #1"));
+	players.push(new GameCharacter(game.world.width/4, 2*game.world.height/3, "CPU Player #2"));
 
 
 	walls = game.add.group();
@@ -85,7 +81,6 @@ function create() {
 	
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
-	game.input.onDown.add(players[0].throwKnifeAtPointer, players[0]);
 }
 
 function update() {
@@ -107,13 +102,8 @@ function update() {
 			game.world.wrap(particle);
 		}, this, true, null);
 */
-	//Player input handling
-	let moveSpeed = 300;
-	players[0].setVelocity((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
-						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
-	
-	//Updating things (for now just the player)
-//	localPlayer.update();
+
+	//Updating things
 	players.forEach(function(element, index, array){element.update();});
 	
 	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
@@ -133,38 +123,32 @@ function throwKnife(player, posPoint, velPoint)
 	player.knife.body.velocity = velPoint;
 }
 
-//Overlap functions
-function knifeHitsWall(knife, wall)
+class GameCharacter
 {
-	console.log("YOU KNIFED A WALL");
-//	knife.destroy(); //This is dangerous when we're dealing with sprite-vs-group overlaps, so I'm using the bool the overlap test returns to destroy the knife in the player's update.
-	//This function isn't being called, since it does absolutely nothing at the moment, but I'm leaving it here in case we want to do something with it. Play a sound, for instance.
-}
-
-function knifeHitsPlayer(knife, player)
-{
-	console.log("YOU KNIFED A PLAYER");
-//	knife.destroy(); //See knifeHitsWall.
-	player.destroy();
-}
-
-//Function-objects below. Normally I'd put them into their own object, but I want to avoid bloating the number of js files for now. It sacrifices the readability of this one a bit, but Ctrl+F never stopped being a thing.
-function GameCharacter()
-{
-	this.name = "Nameless Player";
-	this.knife = null;
-	this.gameObject;
+	/*
+	Member variables:
+		name
+		knife
+		gameObject
+	*/
 	
-	this.init = function(x, y, name)
+	constructor(x, y, name)
 	{
+		this.knife = null;
 		this.gameObject = game.add.sprite(x, y, 'playerSprite');
 		game.physics.enable(this.gameObject);
 		this.gameObject.body.collideWorldBounds = true;
 		this.name = name;
 	}
 	
-	this.update = function()
+	update()
 	{
+		game.physics.arcade.collide(this.gameObject, walls);
+		for(let i = 0; i < players.length && players[i] != this; i++)
+		{
+			game.physics.arcade.collide(this.gameObject, players[i].gameObject);
+		}
+		
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
@@ -182,7 +166,8 @@ function GameCharacter()
 					{
 						if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
 						{
-							players[i].gameObject.destroy(); //TODO: Replace this with something better
+							players[i].killCharacter();
+							//TODO: Send "players[i].name killed by this.name" message, increment score, etc
 							this.knife.destroy();
 							this.knife = null;
 							break;
@@ -197,7 +182,82 @@ function GameCharacter()
 		}
 	}
 	
-	this.throwKnifeAtPointer = function(pointer)
+	killCharacter()
+	{
+		this.gameObject.destroy();
+		
+		let timeBeforeRespawn = 3000; //measured in ms
+		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
+		
+		console.log(this.name+" IS DEAD");
+		displayHandler.addNotification(this.name+" IS DEAD");
+	}
+	
+	static respawnCharacter(charToRespawn)
+	{
+		let newPosX = 0;
+		let newPosY = 0;
+		//Keeping these as variables seems like a bad idea, but it lets us run the calculations before spawning a player gameobject.
+		//We should be fine as long as player GOs keep their size consistent.
+		const charWidth = 50;
+		const charHeight = 50;
+		
+		let isValidPos = false;
+		do
+		{
+			newPosX = Math.random()*game.world.width;
+			newPosY = Math.random()*game.world.height;
+			
+			for(let i = 0; i < walls.length; i++)
+			{
+				let currentWall = walls.getAt(i);
+				isValidPos = isValidPos ||
+					!(newPosX+charWidth > currentWall.x &&
+					newPosX < currentWall.x+currentWall.width &&
+					newPosY+charHeight > currentWall.y &&
+					newPosY < currentWall.y+currentWall.height);
+			}
+		}while(!isValidPos)
+		
+		charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
+		game.physics.enable(charToRespawn.gameObject);
+		charToRespawn.gameObject.body.collideWorldBounds = true;
+	}
+	
+	throwKnife(vel){throwKnife(this, this.gameObject.body.center, vel);}
+	
+	
+	get Velocity(){return this.gameObject.body.velocity;}
+	set Velocity(velPoint) //should be Phaser.Point
+	{
+		this.gameObject.body.velocity = velPoint;
+	}
+	get Position(){return this.gameObject.body.position;}
+	set Position(posPoint) //should be Phaser.Point
+	{
+		this.gameObject.body.position = posPoint;
+	}
+	get Name(){return this.name;}
+}
+
+class LocalPlayer extends GameCharacter
+{
+	constructor(x, y, name)
+	{
+		super(x, y, name);
+		game.input.onDown.add(this.throwKnifeAtPointer, this);
+	}
+
+	update()
+	{
+		super.update();
+		
+		let moveSpeed = 300;
+		this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
+						   (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
+	}
+
+	throwKnifeAtPointer(pointer)
 	{
 		if(this.knife) //Safeguarding against null value of knife
 		{
@@ -210,44 +270,63 @@ function GameCharacter()
 
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
-	
-	this.throwKnife = function(vel){throwKnife(this, this.gameObject.body.center, knifeVel);}
-	
-	this.setVelocity = function(newX, newY)
-	{
-		this.gameObject.body.velocity.x = newX;
-		this.gameObject.body.velocity.y = newY;
-	}
-	this.setPosition = function(newX, newY)
-	{
-		this.gameObject.body.position.x = newX;
-		this.gameObject.body.position.y = newY;
-	}
-	this.getVelocity = function(){return this.gameObject.body.velocity;}
-	this.getPosition = function(){return this.gameObject.body.position;}
-	this.getName = function(){return this.name;}
 }
 
+//This is probably unimportant enough to stay as a function-class
 function HUD()
 {
 	this.knifeStatusText;
 	this.fpsText;
+	this.eventLogText;
+	
+	this.eventStringArray;
 	
 	this.init = function()
 	{
-		this.knifeStatusText = game.add.text(0, 0, "");
-		this.fpsText = game.add.text(0, 0, "");
+		this.knifeStatusText = game.add.text(7, 10, "");
+		this.knifeStatusText.fixedToCamera = true;
+		
+		this.fpsText = game.add.text(7, 675, "");
+		this.fpsText.fixedToCamera = true;
+		
+		this.eventStringArray = [];
+		this.eventLogText = game.add.text(game.camera.width/2, 10, "");
+		this.eventLogText.fixedToCamera = true;
+		this.eventLogText.wordWrap = true;
+		this.eventLogText.wordWrapWidth = game.camera.width/2-7;
+		this.eventLogText.boundsAlignH = 'right'; //Todo: Make this work
+		this.eventLogText.align = 'right';
 	}
 	
 	this.update = function()
 	{
-		this.knifeStatusText.position.x = game.camera.position.x+7;
-		this.knifeStatusText.position.y = game.camera.position.y+10;
 		this.knifeStatusText.text = "Throwable Knife: "+(players[0].knife == null);
 	
-		this.fpsText.position.x = game.camera.position.x+7;
-		this.fpsText.position.y = game.camera.position.y+675;
 		this.fpsText.text = game.time.fps+" FPS";
+	}
+	
+	this.addNotification = function(newEventString)
+	{
+		this.eventStringArray.push(newEventString);
+		this.rewriteEventLogText();
+		
+		let timeBeforeRemoval = 3000;
+		setTimeout(this.removeOldestNotification, timeBeforeRemoval, this);
+	}
+	
+	this.removeOldestNotification = function(ObjectToRemove)
+	{
+		ObjectToRemove.eventStringArray.shift();
+		ObjectToRemove.rewriteEventLogText();
+	}
+	
+	this.rewriteEventLogText = function()
+	{
+		this.eventLogText.text = "";
+		for(let i = 0; i < this.eventStringArray.length; i++)
+		{
+			this.eventLogText.text += this.eventStringArray[i]+"\n";
+		}
 	}
 	
 	this.init();
