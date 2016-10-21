@@ -152,6 +152,7 @@ class GameCharacter
 		name
 		knife
 		gameObject
+		score
 	*/
 	
 	constructor(x, y, name)
@@ -161,6 +162,7 @@ class GameCharacter
 		game.physics.enable(this.gameObject);
 		this.gameObject.body.collideWorldBounds = true;
 		this.name = name;
+		this.score = 0;
 	}
 	
 	update()
@@ -192,6 +194,7 @@ class GameCharacter
 							//TODO: Send "players[i].name killed by this.name" message, increment score, etc
 							this.knife.destroy();
 							this.knife = null;
+							this.score ++;
 							break;
 						}
 					}
@@ -244,6 +247,7 @@ class GameCharacter
 		charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
 		game.physics.enable(charToRespawn.gameObject);
 		charToRespawn.gameObject.body.collideWorldBounds = true;
+		charToRespawn.score = 0;
 	}
 	
 	throwKnife(vel)
@@ -265,6 +269,11 @@ class GameCharacter
 	set Position(posPoint) //should be Phaser.Point
 	{
 		this.gameObject.body.position = posPoint;
+	}
+	get Score() {return this.score;}
+	set Score(num)
+	{
+		this.score = num;
 	}
 	get Name(){return this.name;}
 }
@@ -327,7 +336,7 @@ class LocalPlayer extends GameCharacter
 //This is probably unimportant enough to stay as a function-class
 function HUD()
 {
-	this.knifeStatusText;
+	this.playerStatusText;
 	this.fpsText;
 	this.eventLogText;
 	
@@ -335,8 +344,8 @@ function HUD()
 	
 	this.init = function()
 	{
-		this.knifeStatusText = game.add.text(7, 10, "");
-		this.knifeStatusText.fixedToCamera = true;
+		this.playerStatusText = game.add.text(7, 10, "");
+		this.playerStatusText.fixedToCamera = true;
 		
 		this.fpsText = game.add.text(7, 675, "");
 		this.fpsText.fixedToCamera = true;
@@ -352,7 +361,7 @@ function HUD()
 	
 	this.update = function()
 	{
-		this.knifeStatusText.text = "Throwable Knife: "+(players[0].knife == null);
+		this.playerStatusText.text = "Score: "+(players[0].score)+"\nThrowable Knife: "+(players[0].knife == null);
 	
 		this.fpsText.text = game.time.fps+" FPS";
 	}
