@@ -194,7 +194,6 @@ class GameCharacter
 						if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
 						{
 							players[i].killCharacter(this.name);
-							//TODO: Send "players[i].name killed by this.name" message, increment score, etc
 							this.knife.destroy();
 							this.knife = null;
 							this.score ++;
