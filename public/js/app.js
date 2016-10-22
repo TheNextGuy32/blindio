@@ -7,18 +7,18 @@ let displayHandler, players, walls, windGroup;
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
 let MOVEMENT =
 Object.seal({
-    LEFT: Phaser.Keyboard.A,
-    RIGHT: Phaser.Keyboard.D,
-    UP: Phaser.Keyboard.W,
-    DOWN: Phaser.Keyboard.S,
-	DEBUGKEY_CPULEFT: Phaser.Keyboard.J,
-	DEBUGKEY_CPURIGHT: Phaser.Keyboard.L,
-	DEBUGKEY_CPUUP: Phaser.Keyboard.I,
-	DEBUGKEY_CPUDOWN: Phaser.Keyboard.K,
-	DEBUGKEY_CPUKNIFELEFT: Phaser.Keyboard.LEFT,
-	DEBUGKEY_CPUKNIFERIGHT: Phaser.Keyboard.RIGHT,
-	DEBUGKEY_CPUKNIFEUP: Phaser.Keyboard.UP,
-	DEBUGKEY_CPUKNIFEDOWN: Phaser.Keyboard.DOWN,
+    LEFT: Phaser.KeyCode.A,
+    RIGHT: Phaser.KeyCode.D,
+    UP: Phaser.KeyCode.W,
+    DOWN: Phaser.KeyCode.S,
+	DEBUGKEY_CPULEFT: Phaser.KeyCode.J,
+	DEBUGKEY_CPURIGHT: Phaser.KeyCode.L,
+	DEBUGKEY_CPUUP: Phaser.KeyCode.I,
+	DEBUGKEY_CPUDOWN: Phaser.KeyCode.K,
+	DEBUGKEY_CPUKNIFELEFT: Phaser.KeyCode.LEFT,
+	DEBUGKEY_CPUKNIFERIGHT: Phaser.KeyCode.RIGHT,
+	DEBUGKEY_CPUKNIFEUP: Phaser.KeyCode.UP,
+	DEBUGKEY_CPUKNIFEDOWN: Phaser.KeyCode.DOWN,
 });
 
 //TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
@@ -36,7 +36,6 @@ function preload() {
 }
 
 function create() {
-    game.time.advancedTiming = true;
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
 	//Adding things to world
@@ -226,20 +225,24 @@ class GameCharacter
 		const charWidth = 50;
 		const charHeight = 50;
 		
-		let isValidPos = false;
+		let isValidPos;
 		do
 		{
+			isValidPos = true;
 			newPosX = Math.random()*game.world.width;
 			newPosY = Math.random()*game.world.height;
 			
 			for(let i = 0; i < walls.length; i++)
 			{
 				let currentWall = walls.getAt(i);
-				isValidPos = isValidPos ||
-					!(newPosX+charWidth > currentWall.x &&
+				if(newPosX+charWidth > currentWall.x &&
 					newPosX < currentWall.x+currentWall.width &&
 					newPosY+charHeight > currentWall.y &&
-					newPosY < currentWall.y+currentWall.height);
+					newPosY < currentWall.y+currentWall.height)
+				{
+					isValidPos = false;
+					break;
+				}
 			}
 		}while(!isValidPos)
 		
@@ -305,7 +308,7 @@ class LocalPlayer extends GameCharacter
 	{
 		if(this.knife) //Safeguarding against null value of knife
 		{
-			console.log("Error: Trying to throw a knife while one is already out");
+			console.log("Invalid Action: Trying to throw a knife while one is already out");
 			return;
 		}
 
@@ -352,6 +355,7 @@ function HUD()
 		
 		this.fpsText = game.add.text(7, 675, "");
 		this.fpsText.fixedToCamera = true;
+		game.time.advancedTiming = true;
 		
 		this.eventStringArray = [];
 		this.eventLogText = game.add.text(game.camera.width/2, 10, "");
