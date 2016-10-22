@@ -2,7 +2,6 @@
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 let displayHandler, players, walls, windGroup;
-//Other players' knives might not need to be simulated if the wind is synced well enough. Other players still ought to be for hit detection purposes -- both movement and knife-stabbing. 
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
 let MOVEMENT =
@@ -29,13 +28,15 @@ const breezeForce = 3;
 const breezeRotationSpeed = 0.00001;
 const breezeBackAndForthSpeed = 0.0001;
 
-function preload() {
+function preload()
+{
     game.load.image('skyBackground', 'assets/sky.png');
     game.load.image('playerSprite', 'assets/player.png');
     game.load.image('wallSprite', 'assets/wall.png');
 }
 
-function create() {
+function create()
+{
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
 	//Adding things to world
@@ -46,9 +47,7 @@ function create() {
 	let WORLD_HEIGHT = 2000;
     game.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'skyBackground');
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
 	displayHandler = new HUD();
-
 /*
 	let WIND_INTERVAL = 50;
 	windGroup = game.add.group();
@@ -64,47 +63,54 @@ function create() {
 		}
 	}
 */
-
 	walls = game.add.group();
 	walls.enableBody = true;
 
 	//Wallsprite is 50px*50px, scale is multiplicative
-	let newWall = walls.create(game.world.width/4-25, game.world.height/4-25, 'wallSprite');
-	newWall.scale.setTo(2, 1);
+	let newWall = walls.create(475, 475, 'wallSprite');
+	newWall.scale.setTo(2, 1); //100px wide, 50px tall
+	newWall.body.immovable = true;
+
+	newWall = walls.create(-50, 1800, 'wallSprite');
+	newWall.scale.setTo(4, 1); //200px wide, 50px tall
+	newWall.body.immovable = true;
+
+	newWall = walls.create(1750, 450, 'wallSprite');
+	newWall.scale.setTo(1, 3); //50px wide, 150px tall
 	newWall.body.immovable = true;
 
 	newWall = walls.create(1000, 1100, 'wallSprite');
-	newWall.scale.setTo(5, 5);
+	newWall.scale.setTo(5, 5); //250px wide, 250px tall
 	newWall.body.immovable = true;
 
 	players = [];
 	players.push(new LocalPlayer("Local Player"));
 
 	//Adding NPCs -- dummy characters for now, networked players later.
-	players.push(new GameCharacter("CPU Player #1"));
-	players.push(new GameCharacter("CPU Player #2"));
+	players.push(new GameCharacter("Jeff"));
+	players.push(new GameCharacter("Frank"));
 
-
-	//Todo in the future: Change arrow keys to WASD
+	//Adding listeners for movement keys
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 }
 
-function update() {
+function update()
+{
 /*
 	//Collision groups
 	game.physics.arcade.collide(windGroup, walls);
-	
-	//Wind acceleration & world wrap
-	windDirection = (breezeRotationSpeed * game.time.time) % (2*Math.PI);//  What direction teh  wind is pointing
-	windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The bakc and worth sway of wind
 
-	let windSpeed = Math.sin(windPhase) * breezeForce;
-	
+	//Wind acceleration & world wrap
+	windDirection = (breezeRotationSpeed * game.time.time) % (2*Math.PI);//  What direction the wind is pointing
+	windPhase = (breezeBackAndForthSpeed * game.time.time) % (2*Math.PI);//  The back and forth sway of wind
+
+	const windSpeed = Math.sin(windPhase) * breezeForce;
+
 	windGroup.forEach(
 		function(particle) {
 			particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
 			particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
-		
+
 			game.world.wrap(particle);
 		}, this, true, null);
 */
@@ -112,24 +118,24 @@ function update() {
 	//Updating things
 	players.forEach(function(element, index, array){
 		element.update();
-		
+
 		//BEGIN DEBUG CONTROLS
 		if(index != 0 && element.gameObject.alive)
 		{
 			element.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPURIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPULEFT))*300,
 						   (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUUP))*300);
-						   
+
 			if(game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP))
 			{
 				let knifeVelPoint = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT)),
-						   (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP)));
+													 (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP)));
 				knifeVelPoint.setMagnitude(800);
 				element.throwKnife(knifeVelPoint);
 			}
 		}
 		//END DEBUG CONTROLS
 	});
-	
+
 	//HUD text
 	displayHandler.update();
 }
@@ -142,7 +148,7 @@ function throwKnife(player, posPoint, velPoint)
 	player.knife.outOfBoundsKill = true;
 	player.knife.body.immovable = true;
 	player.knife.scale.setTo(1/5, 1/5);
-	
+
 	player.knife.body.center = posPoint;
 	player.knife.body.velocity = velPoint;
 }
@@ -156,29 +162,29 @@ class GameCharacter
 		gameObject
 		score
 	*/
-	
+
 	constructor(name)
 	{
 		GameCharacter.respawnCharacter(this);
 		this.knife = null;
 		this.name = name;
 	}
-	
+
 	update()
 	{
 		game.physics.arcade.collide(this.gameObject, walls);
-		
+
 		for(let i = 0; i < players.length && players[i] != this; i++)
 		{
 			game.physics.arcade.collide(this.gameObject, players[i].gameObject);
 		}
-		
+
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
 			{
 				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
-				
+
 				if(game.physics.arcade.overlap(this.knife, walls)) //Knife cutting functions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
 				{
 					this.knife.destroy();
@@ -205,27 +211,25 @@ class GameCharacter
 			}
 		}
 	}
-	
+
 	killCharacter(killerName)
 	{
 		this.gameObject.destroy();
-		
+
 		const timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
-		
+
 		displayHandler.addNotification(killerName+" KILLED "+this.name);
 	}
-	
+
 	static respawnCharacter(charToRespawn)
 	{
-		let newPosX = 0;
-		let newPosY = 0;
 		//Keeping these as variables seems like a bad idea, but it lets us run the calculations before spawning a player gameobject.
 		//We should be fine as long as player GOs keep their size consistent.
 		const charWidth = 50;
 		const charHeight = 50;
-		
-		let isValidPos;
+
+		let newPosX, newPosY, isValidPos;
 		do
 		{
 			isValidPos = true;
@@ -245,13 +249,15 @@ class GameCharacter
 				}
 			}
 		}while(!isValidPos)
-		
+
 		charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
 		game.physics.enable(charToRespawn.gameObject);
 		charToRespawn.gameObject.body.collideWorldBounds = true;
 		charToRespawn.score = 0;
+		
+		displayHandler.setOnTop(); //Prevents things from being placed over the HUD text
 	}
-	
+
 	throwKnife(vel)
 	{
 		//Might cause sync issues - reexamine later.
@@ -260,8 +266,7 @@ class GameCharacter
 			throwKnife(this, this.gameObject.body.center, vel);
 		}
 	}
-	
-	
+
 	get Velocity(){return this.gameObject.body.velocity;}
 	set Velocity(velPoint) //should be Phaser.Point
 	{
@@ -300,7 +305,7 @@ class LocalPlayer extends GameCharacter
 		if(this.gameObject.alive)
 		{
 			this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*this.moveSpeed,
-							(game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*this.moveSpeed);
+											 (game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*this.moveSpeed);
 		}
 	}
 
@@ -317,21 +322,21 @@ class LocalPlayer extends GameCharacter
 
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
-	
+
 	killCharacter(killerName)
 	{
 		this.gameObject.destroy();
-		
+
 		const timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(LocalPlayer.respawnCharacter, timeBeforeRespawn, this);
-		
+
 		displayHandler.addNotification(killerName+" KILLED "+this.name);
 		for(let i = 1; i <= timeBeforeRespawn/1000; i++)
 		{
 			setTimeout(function(){displayHandler.addNotification("RESPAWNING IN "+i+"...");}, timeBeforeRespawn-i*1000, this);
 		}
 	}
-	
+
 	static respawnCharacter(charToRespawn)
 	{
 		GameCharacter.respawnCharacter(charToRespawn);
@@ -345,47 +350,63 @@ function HUD()
 	this.playerStatusText;
 	this.fpsText;
 	this.eventLogText;
-	
+
 	this.eventStringArray;
-	
+
 	this.init = function()
 	{
 		this.playerStatusText = game.add.text(7, 10, "");
+		this.playerStatusText.stroke = "#000";
+		this.playerStatusText.fill = "#fff";
+		this.playerStatusText.strokeThickness = 5;
 		this.playerStatusText.fixedToCamera = true;
-		
+
 		this.fpsText = game.add.text(7, 675, "");
 		this.fpsText.fixedToCamera = true;
+		this.fpsText.stroke = "#000";
+		this.fpsText.fill = "#fff";
+		this.fpsText.strokeThickness = 5;
 		game.time.advancedTiming = true;
-		
+
 		this.eventStringArray = [];
 		this.eventLogText = game.add.text(game.camera.width/2, 10, "");
 		this.eventLogText.fixedToCamera = true;
 		this.eventLogText.wordWrap = true;
 		this.eventLogText.wordWrapWidth = game.camera.width/2-7;
+		this.eventLogText.stroke = "#000";
+		this.eventLogText.fill = "#fff";
+		this.eventLogText.strokeThickness = 5;
 	}
-	
+
+	this.setOnTop = function()
+	{
+		this.playerStatusText.bringToTop();
+		this.fpsText.bringToTop();
+		this.eventLogText.bringToTop();
+	}
+
 	this.update = function()
 	{
 		this.playerStatusText.text = "Score: "+(players[0].score)+"\nThrowable Knife: "+(players[0].knife == null);
 	
 		this.fpsText.text = game.time.fps+" FPS";
 	}
-	
+
 	this.addNotification = function(newEventString)
 	{
 		this.eventStringArray.push(newEventString);
 		this.rewriteEventLogText();
-		
+
 		const timeBeforeRemoval = 3000; //measured in ms
 		setTimeout(this.removeOldestNotification, timeBeforeRemoval, this);
 	}
-	
+
 	this.removeOldestNotification = function(ObjectToRemove)
 	{
 		ObjectToRemove.eventStringArray.shift();
 		ObjectToRemove.rewriteEventLogText();
 	}
-	
+
 	this.rewriteEventLogText = function()
 	{
 		this.eventLogText.text = "";
@@ -394,6 +415,6 @@ function HUD()
 			this.eventLogText.text += this.eventStringArray[i]+"\n";
 		}
 	}
-	
+
 	this.init();
 }
