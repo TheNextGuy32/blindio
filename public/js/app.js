@@ -66,13 +66,6 @@ function create() {
 	}
 */
 
-	players = [];
-	players.push(new LocalPlayer(game.world.width/2, game.world.height/2, "Local Player"));
-
-	//Adding NPCs -- dummy characters for now, networked players later.
-	players.push(new GameCharacter(3*game.world.width/4, game.world.height/3, "CPU Player #1"));
-	players.push(new GameCharacter(game.world.width/4, 2*game.world.height/3, "CPU Player #2"));
-
 	walls = game.add.group();
 	walls.enableBody = true;
 
@@ -84,6 +77,14 @@ function create() {
 	newWall = walls.create(1000, 1100, 'wallSprite');
 	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
+
+	players = [];
+	players.push(new LocalPlayer("Local Player"));
+
+	//Adding NPCs -- dummy characters for now, networked players later.
+	players.push(new GameCharacter("CPU Player #1"));
+	players.push(new GameCharacter("CPU Player #2"));
+
 
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
@@ -157,14 +158,11 @@ class GameCharacter
 		score
 	*/
 	
-	constructor(x, y, name)
+	constructor(name)
 	{
+		GameCharacter.respawnCharacter(this);
 		this.knife = null;
-		this.gameObject = game.add.sprite(x, y, 'playerSprite');
-		game.physics.enable(this.gameObject);
-		this.gameObject.body.collideWorldBounds = true;
 		this.name = name;
-		this.score = 0;
 	}
 	
 	update()
@@ -213,7 +211,7 @@ class GameCharacter
 	{
 		this.gameObject.destroy();
 		
-		let timeBeforeRespawn = 3250; //measured in ms
+		const timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
 		
 		displayHandler.addNotification(killerName+" KILLED "+this.name);
@@ -281,9 +279,14 @@ class GameCharacter
 
 class LocalPlayer extends GameCharacter
 {
-	constructor(x, y, name)
+	/*
+	New Member Variables:
+		moveSpeed
+	*/
+	constructor(name)
 	{
-		super(x, y, name);
+		super(name);
+		this.moveSpeed = 300;
 		game.camera.follow(this.gameObject);
 		game.input.onDown.add(this.throwKnifeAtPointer, this);
 	}
@@ -291,12 +294,10 @@ class LocalPlayer extends GameCharacter
 	update()
 	{
 		super.update();
-		
-		let moveSpeed = 300;
 		if(this.gameObject.alive)
 		{
-			this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*moveSpeed,
-							(game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*moveSpeed);
+			this.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.RIGHT)-game.input.keyboard.isDown(MOVEMENT.LEFT))*this.moveSpeed,
+							(game.input.keyboard.isDown(MOVEMENT.DOWN)-game.input.keyboard.isDown(MOVEMENT.UP))*this.moveSpeed);
 		}
 	}
 
@@ -318,7 +319,7 @@ class LocalPlayer extends GameCharacter
 	{
 		this.gameObject.destroy();
 		
-		let timeBeforeRespawn = 3250; //measured in ms
+		const timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(LocalPlayer.respawnCharacter, timeBeforeRespawn, this);
 		
 		displayHandler.addNotification(killerName+" KILLED "+this.name);
@@ -371,7 +372,7 @@ function HUD()
 		this.eventStringArray.push(newEventString);
 		this.rewriteEventLogText();
 		
-		let timeBeforeRemoval = 3000; //measured in ms
+		const timeBeforeRemoval = 3000; //measured in ms
 		setTimeout(this.removeOldestNotification, timeBeforeRemoval, this);
 	}
 	
