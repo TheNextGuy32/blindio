@@ -1,45 +1,68 @@
+var socketio = require('socket.io')
 const Room = require('./room.js');
 
-module.exports = class GameServer {
+let rooms = {};
+let roomCount = 0;
+console.log("Starting the game server.")
+createNewRoom(this.roomCount);
 
-  constructor() {
-    this.rooms = {};
-    this.roomCount = 0;
+module.exports.listen = function(app){
+  let io = socketio.listen(app)
+  
+  module.exports.io = io;
 
-    createNewRoom(this.roomCount);
-  }
-
-  get getOpenRoom () {
-    for (let roomName in this.rooms) {
-      let room = this.rooms[roomName];
-      if (room.getOpenSpots() >= 1) {
-        return room;
-      }
-    }
-    return createNewRoom;
-  }
-  createNewRoom (id) {
-    const room = new Room(id,8);
-    this.rooms[room.name] = room;
+  io.on("connection", (socket) => {
+    console.log("Player joined.");
     
-    this.roomCount ++;
-    
-    return room;
-  }
-  joinRoom(ws) {
-    const room = getOpenRoom();
-    room.joinRoom(ws);
-    ws.room = room;
-  }
-  leaveRoom(ws) {
-    const room = ws.room;
-    room.leaveRoom(ws);
+    joinRoom(socket);
 
-    //  The room is now empty, delete it
-    //  If its the last room dont delete
-    if(room.numberPlayers() == 0) {
-      this.roomCount--;
-      delete this.rooms[room.name];
-    }
-  }
+    onDisconnect(socket);
+  });
+
+  return io;
 }
+
+function createNewRoom (id) {
+  const room = new Room(Math.floor(Math.random()*1000), 8);
+  rooms[room.name] = room;
+  
+  roomCount ++;
+  
+  return room;
+}
+
+function getOpenRoom () {
+  for (let roomName in rooms) {
+    let room = rooms[roomName];
+    if (room.getNumberOpenSpots >= 1) {
+      return room;
+    }
+  }
+  return createNewRoom();
+}
+
+function joinRoom(ws) {
+  const room = getOpenRoom();
+  room.joinRoom(ws);
+}
+
+function leaveRoom(ws) {
+  const room = ws.room;
+  room.leaveRoom(ws);
+
+  //  The room is now empty, delete it
+  //  If its the last room dont delete
+  if(room.numberPlayers() == 0) {
+    roomCount--;
+    delete rooms[room.name];
+  }
+};
+const onDisconnect = (sock) => {
+  const socket = sock;
+  
+  socket.on('disconnect', (data) => {
+    console.log("Player disconnected.");
+    io.to(socket.room.getName).emit("user-disconnect", 'User left room.');
+    leaveRoom(socket);
+  });
+};

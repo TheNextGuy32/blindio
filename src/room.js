@@ -1,7 +1,8 @@
 const p2 = require('p2');
+const gameserver = require('./gameserver.js');
 
 let world;
-let playersBodies = [];
+let playerBodies = [];
 let knifeBodies = [];
 let wallBodies = [];
 
@@ -12,37 +13,60 @@ const breezeForce = 3;
 const breezeRotationSpeed = 0.00001;
 const breezeBackAndForthSpeed = 0.0001;
 
+const TIME_STEP = 1 / 60;
+
 const 
   PLAYER = Math.pow(2,0),
   KNIFE =  Math.pow(2,1),
   WALL = Math.pow(2,2);
 
 module.exports = class Room {
-  constructor(roomName, maxPlayers) {
+  constructor(roomName, maxPlayerCount) {
+    
     this.name = roomName;
-    this.maxPlayers = maxPlayers != null ? maxPlayers : 8;
+    this.maxPlayers = maxPlayerCount ? maxPlayerCount : 8;
+    
+    console.log(`Created room named ${this.name} of size ${this.maxPlayers}.`);
+
     this.connectedPlayers = [];
+    world = new p2.World();
+    setInterval(update, 1000 * TIME_STEP);
   }
 
-  get name () {
+  get getName () {
     return this.name;
   }
-  
-  get numberPlayers () {
-    return this.connectedPlayers.length();
+  set setName (newName) {
+    if(newName) {
+      this.name = newName;
+    }
   }
-  get maxPlayers () {
+  
+  get getNumberPlayers () {
+    return this.connectedPlayers.length;
+  }
+
+  get getMaxPlayers () {
     return this.maxPlayers;
   }
-  get numberOpenSpots () {
-    return this.maxPlayers - connectedPlayers.length();
+
+  set setMaxPlayers (count) {
+    if(count) {
+      this.maxPlayers = count;
+    }
+  }
+
+  get getNumberOpenSpots () {
+    return this.getMaxPlayers - this.getNumberPlayers;
   }
 
   joinRoom(ws) {
+    ws.room = this;
     ws.join(this.name);
     ws.emit('new player data',{});
-    io.to(this.name).emit('ay new player');
+    gameserver.io.to(this.name).emit('ay new player');
   }
+
   leaveRoom(ws) {
     
     //  kill playerobject
@@ -50,15 +74,6 @@ module.exports = class Room {
     ws.leave(this.name);
   }
 }
-
-function create() {
-  world = new p2.World();
- 
-  var timeStep = 1 / 60;
-   
-  setInterval(update, 1000 * timeStep);
-}
-
 function createWall(pos) {
   var wallBody = new p2.Body({
       position: pos
@@ -124,12 +139,15 @@ function updatePhysics() {
       }
     } else {
       //  This collision is between player and wall
-      console.log("Player collided with wall")
+      console.log("Player collided with wall");
     }
-  }
+  });
 }
-function update() {
-  world.step(timeStep);
+function render () {
+
+}
+function update () {
+  world.step(TIME_STEP);
   updatePhysics();
   render();  
 }
