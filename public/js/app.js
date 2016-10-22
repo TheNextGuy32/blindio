@@ -41,13 +41,15 @@ function create() {
 
 	//Adding things to world
 	//Stuff is rendered in the order it's added (back to front)
-	//Desired order: Background < Wind (to be added later) < Players < Walls
-	
+	//Desired order: Background < Wind (to be added later) < Players < Walls < HUD
+
 	let WORLD_WIDTH = 2000;
 	let WORLD_HEIGHT = 2000;
     game.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'skyBackground');
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-	
+
+	displayHandler = new HUD();
+
 /*
 	let WIND_INTERVAL = 50;
 	windGroup = game.add.group();
@@ -63,29 +65,26 @@ function create() {
 		}
 	}
 */
-	
+
 	players = [];
 	players.push(new LocalPlayer(game.world.width/2, game.world.height/2, "Local Player"));
-	
+
 	//Adding NPCs -- dummy characters for now, networked players later.
 	players.push(new GameCharacter(3*game.world.width/4, game.world.height/3, "CPU Player #1"));
 	players.push(new GameCharacter(game.world.width/4, 2*game.world.height/3, "CPU Player #2"));
 
-
 	walls = game.add.group();
 	walls.enableBody = true;
-	
+
 	//Wallsprite is 50px*50px, scale is multiplicative
 	let newWall = walls.create(game.world.width/4-25, game.world.height/4-25, 'wallSprite');
 	newWall.scale.setTo(2, 1);
 	newWall.body.immovable = true;
-	
+
 	newWall = walls.create(1000, 1100, 'wallSprite');
 	newWall.scale.setTo(5, 5);
 	newWall.body.immovable = true;
-	
-	displayHandler = new HUD();
-	
+
 	//Todo in the future: Change arrow keys to WASD
 	game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 }
@@ -113,6 +112,8 @@ function update() {
 	//Updating things
 	players.forEach(function(element, index, array){
 		element.update();
+		
+		//BEGIN DEBUG CONTROLS
 		if(index != 0 && element.gameObject.alive)
 		{
 			element.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPURIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPULEFT))*300,
@@ -126,9 +127,10 @@ function update() {
 				element.throwKnife(knifeVelPoint);
 			}
 		}
+		//END DEBUG CONTROLS
 	});
 	
-	//HUD text (TODO: FIGURE OUT HOW TO PROPERLY ANCHOR TEXT TO CAMERA)
+	//HUD text
 	displayHandler.update();
 }
 
@@ -168,6 +170,7 @@ class GameCharacter
 	update()
 	{
 		game.physics.arcade.collide(this.gameObject, walls);
+		
 		for(let i = 0; i < players.length && players[i] != this; i++)
 		{
 			game.physics.arcade.collide(this.gameObject, players[i].gameObject);
@@ -190,7 +193,7 @@ class GameCharacter
 					{
 						if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
 						{
-							players[i].killCharacter();
+							players[i].killCharacter(this.name);
 							//TODO: Send "players[i].name killed by this.name" message, increment score, etc
 							this.knife.destroy();
 							this.knife = null;
@@ -207,15 +210,14 @@ class GameCharacter
 		}
 	}
 	
-	killCharacter()
+	killCharacter(killerName)
 	{
 		this.gameObject.destroy();
 		
-		let timeBeforeRespawn = 3000; //measured in ms
+		let timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
 		
-		console.log(this.name+" IS DEAD");
-		displayHandler.addNotification(this.name+" IS DEAD");
+		displayHandler.addNotification(killerName+" KILLED "+this.name);
 	}
 	
 	static respawnCharacter(charToRespawn)
@@ -313,17 +315,18 @@ class LocalPlayer extends GameCharacter
 		throwKnife(this, this.gameObject.body.center, knifeVel);
 	}
 	
-	killCharacter()
+	killCharacter(killerName)
 	{
 		this.gameObject.destroy();
 		
-		let timeBeforeRespawn = 3000; //measured in ms
+		let timeBeforeRespawn = 3250; //measured in ms
 		setTimeout(LocalPlayer.respawnCharacter, timeBeforeRespawn, this);
 		
-		displayHandler.addNotification(this.name+" IS DEAD");
-		displayHandler.addNotification("RESPAWNING IN 3...");
-		setTimeout(function(){displayHandler.addNotification("RESPAWNING IN 2...");}, 1000, this);
-		setTimeout(function(){displayHandler.addNotification("RESPAWNING IN 1...");}, 2000, this);
+		displayHandler.addNotification(killerName+" KILLED "+this.name);
+		for(let i = 1; i <= timeBeforeRespawn/1000; i++)
+		{
+			setTimeout(function(){displayHandler.addNotification("RESPAWNING IN "+i+"...");}, timeBeforeRespawn-i*1000, this);
+		}
 	}
 	
 	static respawnCharacter(charToRespawn)
@@ -355,8 +358,6 @@ function HUD()
 		this.eventLogText.fixedToCamera = true;
 		this.eventLogText.wordWrap = true;
 		this.eventLogText.wordWrapWidth = game.camera.width/2-7;
-		this.eventLogText.boundsAlignH = 'right'; //Todo: Make this work
-		this.eventLogText.align = 'right';
 	}
 	
 	this.update = function()
@@ -371,7 +372,7 @@ function HUD()
 		this.eventStringArray.push(newEventString);
 		this.rewriteEventLogText();
 		
-		let timeBeforeRemoval = 3000;
+		let timeBeforeRemoval = 3000; //measured in ms
 		setTimeout(this.removeOldestNotification, timeBeforeRemoval, this);
 	}
 	
