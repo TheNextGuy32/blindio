@@ -6,16 +6,16 @@ let roomCount = 0;
 console.log("Starting the game server.")
 createNewRoom(this.roomCount);
 
+let io = {};
+
 module.exports.listen = function(app){
-  let io = socketio.listen(app)
+  io = socketio.listen(app)
   
   module.exports.io = io;
 
   io.on("connection", (socket) => {
     console.log("Player joined.");
-    
     joinRoom(socket);
-
     onDisconnect(socket);
   });
 
@@ -52,7 +52,7 @@ function leaveRoom(ws) {
 
   //  The room is now empty, delete it
   //  If its the last room dont delete
-  if(room.numberPlayers() == 0) {
+  if(room.getNumberPlayers == 0) {
     roomCount--;
     delete rooms[room.name];
   }
