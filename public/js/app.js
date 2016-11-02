@@ -25,8 +25,8 @@ let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
 const breezeForce = 3;
-const breezeRotationSpeed = 0.00001;
-const breezeBackAndForthSpeed = 0.0001;
+const breezeRotationSpeed = 0.00005;
+const breezeBackAndForthSpeed = 0.0005;
 
 function preload()
 {
