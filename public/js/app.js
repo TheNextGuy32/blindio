@@ -48,7 +48,7 @@ function create()
     game.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'skyBackground');
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 	displayHandler = new HUD();
-/*
+
 	let WIND_INTERVAL = 50;
 	windGroup = game.add.group();
 	windGroup.enableBody = true;
@@ -62,7 +62,7 @@ function create()
 			//newWind.body.velocity.y = -5000;
 		}
 	}
-*/
+
 	walls = game.add.group();
 	walls.enableBody = true;
 
@@ -96,7 +96,7 @@ function create()
 
 function update()
 {
-/*
+
 	//Collision groups
 	game.physics.arcade.collide(windGroup, walls);
 
@@ -113,7 +113,7 @@ function update()
 
 			game.world.wrap(particle);
 		}, this, true, null);
-*/
+
 
 	//Updating things
 	players.forEach(function(element, index, array){
@@ -172,18 +172,26 @@ class GameCharacter
 
 	update()
 	{
-		game.physics.arcade.collide(this.gameObject, walls);
-
-		for(let i = 0; i < players.length && players[i] != this; i++)
+		if(this.gameObject.alive)
 		{
-			game.physics.arcade.collide(this.gameObject, players[i].gameObject);
+			this.gameObject.body.immovable = true;
+			game.physics.arcade.collide(this.gameObject, windGroup);
+			this.gameObject.body.immovable = false;
+			game.physics.arcade.collide(this.gameObject, walls);
+
+			for(let i = 0; i < players.length && players[i] != this; i++)
+			{
+				game.physics.arcade.collide(this.gameObject, players[i].gameObject);
+			}
 		}
 
 		if(this.knife != null)
 		{
 			if(this.knife.alive)
 			{
-				game.physics.arcade.collide(this.knife, windGroup); //Todo: Consider replacing with overlap function or playing with mass values.
+				this.knife.body.immovable = true;
+				game.physics.arcade.collide(this.knife, windGroup);
+			this.knife.body.immovable = false;
 
 				if(game.physics.arcade.overlap(this.knife, walls)) //Knife cutting functions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
 				{
