@@ -1,7 +1,7 @@
 "use strict";
 
 let game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-let displayHandler, players, walls, windGroup;
+let displayHandler, players, walls, windGroup, windGrid;
 
 //Keybind abstraction, I guess. Just some javascript for its own sake, because I doubt we're ever going to want to rebind the keys.
 let MOVEMENT =
@@ -20,7 +20,6 @@ Object.seal({
 	DEBUGKEY_CPUKNIFEDOWN: Phaser.KeyCode.DOWN,
 });
 
-//TODO (consider) moving breeze stuff into its own class. Maybe do the same for player stuff too.
 let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
@@ -33,6 +32,7 @@ function preload()
     game.load.image('skyBackground', 'assets/sky.png');
     game.load.image('playerSprite', 'assets/player.png');
     game.load.image('wallSprite', 'assets/wall.png');
+    game.load.image('windSprite', 'assets/wind.png');
 }
 
 function create()
@@ -49,6 +49,10 @@ function create()
 	game.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 	displayHandler = new HUD();
 
+	
+	windGrid = new WindHolderHolder();
+	windGrid.init(WORLD_WIDTH/2, WORLD_HEIGHT/2, WORLD_WIDTH+40, WORLD_HEIGHT+40, 8);
+	
 	let WIND_INTERVAL = 50;
 	windGroup = game.add.group();
 	windGroup.enableBody = true;
@@ -56,9 +60,11 @@ function create()
 	{
 		for(let y = WIND_INTERVAL/2; y < WORLD_HEIGHT; y += WIND_INTERVAL)
 		{
-			let newWind = windGroup.create(x, y, 'playerSprite');
+			let newWind = game.add.sprite(x, y, 'windSprite');
 			newWind.scale.setTo(1/5, 1/5);
+			game.physics.enable(newWind);
 			newWind.body.mass = 0.5;
+			windGrid.addWind(newWind);
 			//newWind.body.velocity.y = -5000;
 		}
 	}
@@ -106,17 +112,14 @@ function update()
 
 	const windSpeed = Math.sin(windPhase) * breezeForce;
 
-	windGroup.forEach(
-		function(particle) {
-			particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
-			particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
-
-			game.world.wrap(particle);
-		}, this, true, null);
-
-
+	//preventing players from being moved by wind (MIGHT BE UNNECESSARY - TEST THIS AGAIN ONCE SERVER CODE IS UP TO SPEC)
+	players.forEach(function(element, index, array){if(element.gameObject.body){element.gameObject.body.immovable = true;}});
+	
+	windGrid.update(Math.cos(windDirection)*windSpeed, Math.sin(windDirection)*windSpeed);
+	
 	//Updating things
 	players.forEach(function(element, index, array){
+		if(element.gameObject.body){element.gameObject.body.immovable = false;}
 		element.update();
 
 		//BEGIN DEBUG CONTROLS
@@ -349,6 +352,88 @@ class LocalPlayer extends GameCharacter
 	{
 		GameCharacter.respawnCharacter(charToRespawn);
 		game.camera.follow(charToRespawn.gameObject);
+	}
+}
+
+function WindHolderHolder()
+{
+	this.windHolderArray = [];
+	
+	this.init = function(centerX, centerY, width, height, subdivisionsPerAxis)
+	{
+		for(let xDiv = 0; xDiv < subdivisionsPerAxis; xDiv++)
+		{
+			for(let yDiv = 0; yDiv < subdivisionsPerAxis; yDiv++)
+			{
+				this.windHolderArray.push(new WindHolder(this, centerX+(width*-0.5+width*(xDiv+0.5)/subdivisionsPerAxis), centerY+(height*-0.5+height*(yDiv+0.5)/subdivisionsPerAxis), width*(0.5/subdivisionsPerAxis), height*(0.5/subdivisionsPerAxis)));
+			}
+		}
+	}
+	
+	this.addWind = function(newWind)
+	{
+		for(let i = 0; i < this.windHolderArray.length; i++)
+		{
+			this.windHolderArray[i].addWind(newWind);
+		}
+	}
+	
+	this.update = function(deltaVelX, deltaVelY)
+	{
+		for(let i = 0; i < this.windHolderArray.length; i++)
+		{
+			this.windHolderArray[i].update(deltaVelX, deltaVelY);
+		}
+	}
+}
+
+function WindHolder(parentHolder, centerX, centerY, halfWidth, halfHeight)
+{
+	this.windArray = [];
+	
+	this.collidesWithBox = function(windToTest)
+	{
+		return !(windToTest.x+windToTest.width*0.5 < centerX-halfWidth || windToTest.x+windToTest.width*0.5 > centerX+halfWidth ||
+				 windToTest.y+windToTest.height*0.5 < centerY-halfHeight || windToTest.y+windToTest.height*0.5 > centerY+halfHeight);
+	}
+	
+	this.addWind = function(newWind)
+	{
+		if(this.collidesWithBox(newWind))
+		{
+			this.windArray.push(newWind);
+		}
+	}
+	
+	this.update = function(deltaVelX, deltaVelY)
+	{
+		for(let i = 0; i < this.windArray.length; i++)
+		{
+			if(!this.collidesWithBox(this.windArray[i]))
+			{
+				parentHolder.addWind(this.windArray[i]);
+				this.windArray.splice(i, 1);
+				i--;
+			}
+			else
+			{
+				//DO WIND UPDATES HERE
+				this.windArray[i].body.velocity.x += deltaVelX;
+				this.windArray[i].body.velocity.y += deltaVelY;
+				
+				game.world.wrap(this.windArray[i]);
+				game.physics.arcade.collide(this.windArray[i], walls);
+				
+				for(let h = 0; h < players.length; h++)
+				{
+					game.physics.arcade.collide(this.windArray[i], players[h].gameObject);
+				}
+				for(let h = 0; h < this.windArray.length; h++)
+				{
+					game.physics.arcade.collide(this.windArray[i], this.windArray[h]);
+				}
+			}
+		}
 	}
 }
 
