@@ -53,7 +53,7 @@ function create()
 	windGrid = new WindHolderHolder();
 	windGrid.init(WORLD_WIDTH/2, WORLD_HEIGHT/2, WORLD_WIDTH+40, WORLD_HEIGHT+40, 8);
 	
-	let WIND_INTERVAL = 50;
+	let WIND_INTERVAL = 55;
 	windGroup = game.add.group();
 	windGroup.enableBody = true;
 	for(let x = WIND_INTERVAL/2; x < WORLD_WIDTH; x += WIND_INTERVAL)
@@ -427,8 +427,12 @@ function WindHolder(parentHolder, centerX, centerY, halfWidth, halfHeight)
 				for(let h = 0; h < players.length; h++)
 				{
 					game.physics.arcade.collide(this.windArray[i], players[h].gameObject);
+					if(players[h].knife)
+					{
+						game.physics.arcade.collide(this.windArray[i], players[h].knife);
+					}
 				}
-				for(let h = 0; h < this.windArray.length; h++)
+				for(let h = i+1; h < this.windArray.length; h++)
 				{
 					game.physics.arcade.collide(this.windArray[i], this.windArray[h]);
 				}
