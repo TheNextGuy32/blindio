@@ -372,9 +372,10 @@ function WindHolderHolder()
 	
 	this.addWind = function(newWind)
 	{
+		let alreadyAddedToGrid = false;
 		for(let i = 0; i < this.windHolderArray.length; i++)
 		{
-			this.windHolderArray[i].addWind(newWind);
+			alreadyAddedToGrid = alreadyAddedToGrid || this.windHolderArray[i].addWind(newWind);
 		}
 	}
 	
@@ -393,8 +394,8 @@ function WindHolder(parentHolder, centerX, centerY, halfWidth, halfHeight)
 	
 	this.collidesWithBox = function(windToTest)
 	{
-		return !(windToTest.x+windToTest.width*0.5 < centerX-halfWidth || windToTest.x+windToTest.width*0.5 > centerX+halfWidth ||
-				 windToTest.y+windToTest.height*0.5 < centerY-halfHeight || windToTest.y+windToTest.height*0.5 > centerY+halfHeight);
+		return !(windToTest.x+windToTest.width < centerX-halfWidth || windToTest.x > centerX+halfWidth ||
+				 windToTest.y+windToTest.height < centerY-halfHeight || windToTest.y > centerY+halfHeight);
 	}
 	
 	this.addWind = function(newWind)
@@ -402,7 +403,9 @@ function WindHolder(parentHolder, centerX, centerY, halfWidth, halfHeight)
 		if(this.collidesWithBox(newWind))
 		{
 			this.windArray.push(newWind);
+			return true;
 		}
+		return false;
 	}
 	
 	this.update = function(deltaVelX, deltaVelY)
