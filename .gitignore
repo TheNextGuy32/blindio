@@ -80,6 +80,9 @@ build/Release
 
 # Dependency directories
 node_modules/
+node_modules
+node_module
+node_module/
 jspm_packages
 
 # Optional npm cache directory
