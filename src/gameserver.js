@@ -14,11 +14,14 @@ module.exports.listen = function(app){
   module.exports.io = io;
 
   io.on("connection", (socket) => {
-    console.log("Player joined.");
-    joinRoom(socket);
-    onDisconnect(socket);
-  });
+    console.log("Player joined gameserver.");
+    
+    getOpenRoom().joinRoom(socket);
 
+    socket.on('disconnect', (data) => {
+      console.log("Player left gameserver.");
+    });
+  });
   return io;
 }
 
@@ -41,28 +44,7 @@ function getOpenRoom () {
   return createNewRoom();
 }
 
-function joinRoom(ws) {
-  const room = getOpenRoom();
-  room.joinRoom(ws);
+module.exports.closeRoom = function(room) {
+  roomCount--;
+  rooms[room.name];
 }
-
-function leaveRoom(ws) {
-  const room = ws.room;
-  room.leaveRoom(ws);
-
-  //  The room is now empty, delete it
-  //  If its the last room dont delete
-  if(room.getNumberPlayers == 0) {
-    roomCount--;
-    delete rooms[room.name];
-  }
-};
-const onDisconnect = (sock) => {
-  const socket = sock;
-  
-  socket.on('disconnect', (data) => {
-    console.log("Player disconnected.");
-    io.to(socket.room.getName).emit("user-disconnect", 'User left room.');
-    leaveRoom(socket);
-  });
-};

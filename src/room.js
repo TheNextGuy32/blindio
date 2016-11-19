@@ -2,16 +2,17 @@ const p2 = require('p2');
 const gameserver = require('./gameserver.js');
 
 let world;
-let playerBodies = [];
-let knifeBodies = [];
-let wallBodies = [];
+let playerObjects = [];
+let knifeObjects = [];
+
+let clientWalls = [];
 
 const windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
 const breezeForce = 3;
-const breezeRotationSpeed = 0.0001;
-const breezeBackAndForthSpeed = 0.001;
+const breezeRotationSpeed = 10;
+const breezeBackAndForthSpeed = 10;
 
 const TIME_STEP = 1 / 60;
 
@@ -33,6 +34,9 @@ module.exports = class Room {
 
     this.connectedPlayers = [];
     world = new p2.World();
+    
+    clientWalls.push(createWall([0,0]));
+
     setInterval(()=>{this.update()}, 1000 * TIME_STEP);
   }
 
@@ -62,80 +66,134 @@ module.exports = class Room {
   get getNumberOpenSpots () {
     return this.getMaxPlayers - this.getNumberPlayers;
   }
-  render() {
-
-  }
   updatePhysics() {
-    playerBodies.forEach(warp);
-    knifeBodies.forEach(warp);
-    wallBodies.forEach(warp);
+    // playerBodies.forEach(warp);
+    // knifeBodies.forEach(warp);
+    // wallBodies.forEach(warp);
 
-    world.on("impact", (evt) => {
-      let bodyA = evt.bodyA;
-      let bodyB = evt.bodyB;
+    // world.on("impact", (evt) => {
+    //   let bodyA = evt.bodyA;
+    //   let bodyB = evt.bodyB;
 
-      if (bodyA.shapes[0].collisionGroup == KNIFE || bodyB.shapes[0].collisionGroup == KNIFE){
-        // Knife collided with something
-        let bulletBody = bodyA.shapes[0].collisionGroup == BULLET ? bodyA : bodyB,
-            otherBody = bodyB == bulletBody ? bodyA : bodyB;
+    //   if (bodyA.shapes[0].collisionGroup == KNIFE || bodyB.shapes[0].collisionGroup == KNIFE){
+    //     // Knife collided with something
+    //     let bulletBody = bodyA.shapes[0].collisionGroup == BULLET ? bodyA : bodyB,
+    //         otherBody = bodyB == bulletBody ? bodyA : bodyB;
 
-        if(otherBody.shapes[0].collisionGroup == WALL){
-          //  Knife hitting wall
-          console.log("Knife hit wall");
-        } else {
-          //  Knife hitting person
-          console.log("Knife hit player");
-        }
-      } else {
-        //  This collision is between player and wall
-        console.log("Player collided with wall");
-      }
-    });
+    //     if(otherBody.shapes[0].collisionGroup == WALL){
+    //       //  Knife hitting wall
+    //       console.log("Knife hit wall");
+    //     } else {
+    //       //  Knife hitting person
+    //       console.log("Knife hit player");
+    //     }
+    //   } else {
+    //     //  This collision is between player and wall
+    //     console.log("Player collided with wall");
+    //   }
+    // });
   }
   wind(TIME_STEP) {
-    //Wind acceleration & world wrap
-    windDirection = (breezeRotationSpeed * TIME_STEP) % (2*Math.PI);//  What direction the wind is pointing
-    windPhase = (breezeBackAndForthSpeed * TIME_STEP) % (2*Math.PI);//  The back and forth sway of wind
+    windDirection = (breezeRotationSpeed * TIME_STEP) % (2*Math.PI);
+    windPhase = (breezeBackAndForthSpeed * TIME_STEP) % (2*Math.PI);
+
+    gameserver.io.in(this.name).emit('wind', {phase: windPhase, direction: windDirection });
+  }
+  positions(TIME_STEP) {
+    //  Sending player positions
+    let objectStates = {
+      players: [],
+      knives: [],
+    };
+    for(let p = 0 ; p < playerObjects.length ; p++) {
+      objectStates.players.push({
+        id: playerObjects[p].id,
+        body: playerObjects[p].body,
+      });
+    }
+
+    for(let k = 0 ; k < knifeObjects.length ; k++) {
+      objectStates.knifeObjects.push({
+        id: knifeObjects[p].id,
+        body: knifeObjects[p].body,
+      });
+    }
+
+    gameserver.io.in(this.name).emit('object-states', objectStates);
   }
   update() {
     world.step(TIME_STEP);
+    
+    this.updatePhysics(TIME_STEP);
+    this.positions(TIME_STEP);
     this.wind(TIME_STEP);
-    gameserver.io.in(this.name).emit('wind', {phase: windPhase, direction: windDirection });
   }
   
-  joinRoom(ws) {
-    ws.room = this;
-    ws.join(this.name);
+  joinRoom(socket) {
+    socket.join(this.name);
+    socket.room = this;
+
+    socket.emit('load-level', {
+      roomName: this.name, 
+      walls: clientWalls,
+    });
+  
+    socket.on('disconnect', (data) => {
+      console.log("Player left room.");
+      gameserver.io.to(socket.room.getName).emit("user-disconnect", 'User left room.');
+      leaveRoom(socket);
+    });
+
+    socket.on('sending name', (data) => {
+      console.log("This player is named " + data + ".");
+    });
+
+    socket.on("input", (data) => {
+      console.dir(data);
+    });
 
     //  Create the player that hes using
     //  id
-    const player = {
-      ws: ws,
+    let player = {
+      ws: socket,
       id: Math.random()*10000,
-      body: createPlayerBody([0,0])
+      body: createPlayerBody([0,0]),
+      input: {},
     };
+    playerObjects.push(player);
 
-    ws.emit('new player data',{});
-    gameserver.io.in(this.name).emit('message', 'A new player entered the room.');
-    this.update();
+    //gameserver.io.in(this.name).emit('message', 'A new player entered the room.');
   }
 
   leaveRoom(ws) {
     
-    //  kill playerobject
+    for(let p = 0 ; p < playerObjects.length ; p ++) {
+      if(playerObjects[p].ws === ws)
+      {
+        //  kill playerobject
+      }
+    }
     
     ws.leave(this.name);
   }
 }
+
 function createWall(pos) {
   var wallBody = new p2.Body({
-      position: pos
+      mass: 1,
+      position: pos,
+      velocity: [0, 0],
   });
   wallBody.collisionGroup = WALL;
   wallBody.collisionMask = PLAYER | KNIFE;
   wallBody.addShape(new p2.Box({ width: 1, height: 1}));
-  wallBodies.add(wallBody);
   world.addBody(wallBody);
+
+  return {
+    pos: pos,
+    width: 1,
+    height: 1, 
+  };
 }
 function createPlayerBody(pos) {
   var playerBody = new p2.Body({
@@ -144,8 +202,8 @@ function createPlayerBody(pos) {
   playerBody.collisionGroup = PLAYER;
   playerBody.collisionMask = WALL | KNIFE;
   playerBody.addShape(new p2.Circle({ radius: 1 }));
-  playerBodies.push(playerBody);
   world.addBody(playerBody);
+  return playerBody;
 }
 
 function createKnife(pos, vel) {
@@ -157,8 +215,9 @@ function createKnife(pos, vel) {
   knifeBody.collisionGroup = KNIFE;
   knifeBody.collisionMask = WALL | PLAYER;
   knifeBody.addShape(new p2.Circle({ radius: 1 }));
-  knifeBodies.add(knifeBody);
+  //knifeBodies.push(knifeBody);
   world.addBody(knifeBody);
+  return knifeBody;
 }
 
 function warp(body) {
@@ -169,3 +228,14 @@ function warp(body) {
   if(p[1] < -HEIGHT/2) p[1] =  HEIGHT/2;
 }
 
+
+function leaveRoom(ws) {
+  const room = ws.room;
+  room.leaveRoom(ws);
+
+  //  The room is now empty, delete it
+  //  If its the last room dont delete
+  if(room.getNumberPlayers == 0) {
+    gameserver.closeRoom(room);
+  }
+};
