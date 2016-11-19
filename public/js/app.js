@@ -113,7 +113,7 @@ function update()
 	const windSpeed = Math.sin(windPhase) * breezeForce;
 
 	//preventing players from being moved by wind (MIGHT BE UNNECESSARY - TEST THIS AGAIN ONCE SERVER CODE IS UP TO SPEC)
-	players.forEach(function(element, index, array){if(element.gameObject.body){element.gameObject.body.immovable = true;}});
+	players.forEach(function(element, index, array){if(element.gameObject.body){element.gameObject.body.immovable = true;}if(element.knife && element.knife.body){element.knife.body.immovable = true;}});
 	
 	windGrid.update(Math.cos(windDirection)*windSpeed, Math.sin(windDirection)*windSpeed);
 	
