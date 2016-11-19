@@ -157,7 +157,7 @@ module.exports = class Room {
     let player = {
       ws: socket,
       id: Math.random()*10000,
-      body: createPlayerBody([0,0]),
+      body: {},//createPlayerBody([0,0]),
       input: {},
     };
     playerObjects.push(player);
