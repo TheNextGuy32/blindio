@@ -4,9 +4,9 @@ class LocalPlayer extends GameCharacter
   New Member Variables:
     moveSpeed
   */
-  constructor(name)
+  constructor(id)
   {
-    super(name);
+    super(id);
     this.moveSpeed = 300;
     game.camera.follow(this.gameObject);
     game.input.onDown.add(this.throwKnifeAtPointer, this);
@@ -36,14 +36,14 @@ class LocalPlayer extends GameCharacter
     throwKnife(this, this.gameObject.body.center, knifeVel);
   }
 
-  killCharacter(killerName)
+  killCharacter(killerId)
   {
     this.gameObject.destroy();
 
     const timeBeforeRespawn = 3250; //measured in ms
     setTimeout(LocalPlayer.respawnCharacter, timeBeforeRespawn, this);
 
-    displayHandler.addNotification(killerName+" KILLED "+this.name);
+    displayHandler.addNotification(killerId+" KILLED "+this.id);
     for(let i = 1; i <= timeBeforeRespawn/1000; i++)
     {
       setTimeout(function(){displayHandler.addNotification("RESPAWNING IN "+i+"...");}, timeBeforeRespawn-i*1000, this);
@@ -102,7 +102,7 @@ function HUD()
   {
     this.playerStatusText.text = "Score: "+(players[0].score)+"\nThrowable Knife: "+(players[0].knife == null);
   
-    this.fpsText.text = game.time.fps + " FPS";
+    this.fpsText.text = game.time.fps+" FPS";
   }
 
   this.addNotification = function(newEventString)

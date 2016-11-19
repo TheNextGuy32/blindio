@@ -9,9 +9,14 @@ function preload()
     game.load.image('skyBackground', 'assets/sky.png');
     game.load.image('playerSprite', 'assets/player.png');
     game.load.image('wallSprite', 'assets/wall.png');
+    game.load.image('windSprite', 'assets/wind.png');
 }
 
 function createWind() {
+
+  windGrid = new WindHolderHolder();
+  windGrid.init(WORLD_WIDTH/2, WORLD_HEIGHT/2, WORLD_WIDTH+40, WORLD_HEIGHT+40, 8);
+  
   let WIND_INTERVAL = 50;
   windGroup = game.add.group();
   windGroup.enableBody = true;
@@ -19,9 +24,11 @@ function createWind() {
   {
     for(let y = WIND_INTERVAL/2; y < WORLD_HEIGHT; y += WIND_INTERVAL)
     {
-      let newWind = windGroup.create(x, y, 'playerSprite');
+      let newWind = game.add.sprite(x, y, 'windSprite');
       newWind.scale.setTo(1/5, 1/5);
+      game.physics.enable(newWind);
       newWind.body.mass = 0.5;
+      windGrid.addWind(newWind);
     }
   }
 }
@@ -65,13 +72,26 @@ const breezeForce = 3;
 function wind() {
   const windSpeed = Math.sin(windPhase) * breezeForce;
 
-  windGroup.forEach(
-    function(particle) {
-      particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
-      particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
+  windGrid.update(
+    Math.cos(windDirection)*windSpeed, 
+    Math.sin(windDirection)*windSpeed);
 
-      game.world.wrap(particle);
-    }, this, true, null);
+  // windGroup.forEach(
+  //   function(particle) {
+  //     particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
+  //     particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
+
+  //     game.world.wrap(particle);
+  //   }, this, true, null);
+
+  players.forEach(function(element, index, array) {
+    if(element.gameObject.body) {
+      element.gameObject.body.immovable = true;
+    }
+    if(element.knife && element.knife.body) {
+      element.knife.body.immovable = true;
+    }
+  });
 
   //  IS THIS REDUNDANT? //
   game.physics.arcade.collide(windGroup, walls);
