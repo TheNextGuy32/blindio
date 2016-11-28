@@ -19,9 +19,6 @@ class GameCharacter
   {
     if(this.gameObject.alive)
     {
-      this.gameObject.body.immovable = true;
-      game.physics.arcade.collide(this.gameObject, windGroup);
-      this.gameObject.body.immovable = false;
       game.physics.arcade.collide(this.gameObject, walls);
 
       for(let i = 0; i < players.length && players[i] != this; i++)
@@ -34,10 +31,6 @@ class GameCharacter
     {
       if(this.knife.alive)
       {
-        this.knife.body.immovable = true;
-        game.physics.arcade.collide(this.knife, windGroup);
-      this.knife.body.immovable = false;
-
         if(game.physics.arcade.overlap(this.knife, walls)) //Knife cutting functions are to be handled either serverside or clientside - these overlap tests are just for looks and might be changed later.
         {
           this.knife.destroy();

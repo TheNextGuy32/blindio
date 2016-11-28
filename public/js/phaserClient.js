@@ -1,4 +1,4 @@
-let game, displayHandler, players, walls, windGroup, level;
+let game, displayHandler, players, walls, level;
 let id = "Oliver";
 
 const WORLD_WIDTH = 2000;
@@ -17,9 +17,7 @@ function createWind() {
   windGrid = new WindHolderHolder();
   windGrid.init(WORLD_WIDTH/2, WORLD_HEIGHT/2, WORLD_WIDTH+40, WORLD_HEIGHT+40, 8);
   
-  let WIND_INTERVAL = 50;
-  windGroup = game.add.group();
-  windGroup.enableBody = true;
+  let WIND_INTERVAL = 55;
   for(let x = WIND_INTERVAL/2; x < WORLD_WIDTH; x += WIND_INTERVAL)
   {
     for(let y = WIND_INTERVAL/2; y < WORLD_HEIGHT; y += WIND_INTERVAL)
@@ -72,29 +70,21 @@ const breezeForce = 3;
 function wind() {
   const windSpeed = Math.sin(windPhase) * breezeForce;
 
-  windGrid.update(
-    Math.cos(windDirection)*windSpeed, 
-    Math.sin(windDirection)*windSpeed);
-
-  // windGroup.forEach(
-  //   function(particle) {
-  //     particle.body.velocity.x += Math.cos(windDirection) * windSpeed;
-  //     particle.body.velocity.y += Math.sin(windDirection) * windSpeed;
-
-  //     game.world.wrap(particle);
-  //   }, this, true, null);
-
   players.forEach(function(element, index, array) {
     if(element.gameObject.body) {
       element.gameObject.body.immovable = true;
     }
-    if(element.knife && element.knife.body) {
-      element.knife.body.immovable = true;
+  });
+  
+  windGrid.update(
+    Math.cos(windDirection)*windSpeed, 
+    Math.sin(windDirection)*windSpeed);
+
+  players.forEach(function(element, index, array) {
+    if(element.gameObject.body) {
+      element.gameObject.body.immovable = false;
     }
   });
-
-  //  IS THIS REDUNDANT? //
-  game.physics.arcade.collide(windGroup, walls);
 }
 
 
@@ -127,30 +117,6 @@ function update()
   sendInput();
   displayHandler.update();
 }
-
-// const breezeRotationSpeed = 0.00005;
-// const breezeBackAndForthSpeed = 0.0005;
-
-// players.forEach(function(element, index, array){
-//  element.update();
-
-//  //BEGIN DEBUG CONTROLS
-//  if(index != 0 && element.gameObject.alive)
-//  {
-//    element.Velocity = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPURIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPULEFT))*300,
-//             (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUUP))*300);
-
-//    if(game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN) || game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP))
-//    {
-//      let knifeVelPoint = new Phaser.Point((game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFERIGHT)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFELEFT)),
-//                         (game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEDOWN)-game.input.keyboard.isDown(MOVEMENT.DEBUGKEY_CPUKNIFEUP)));
-//      knifeVelPoint.setMagnitude(800);
-//      element.throwKnife(knifeVelPoint);
-//    }
-//  }
-//  //END DEBUG CONTROLS
-// });
-
 
 // function throwKnife(player, posPoint, velPoint)
 // {
