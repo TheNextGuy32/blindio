@@ -149,7 +149,10 @@ module.exports = class Room {
     });
 
     socket.on("input", (data) => {
-      console.dir(data);
+      console.dir(data.id);
+      for(let i = 0 ; i < playerObjects.length; i++) {
+        console.dir(playerObjects[i].ws);
+      }
     });
 
     //  Create the player that hes using
