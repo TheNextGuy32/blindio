@@ -17,8 +17,11 @@ function windUpdate(wind) {
   windPhase = wind.phase;
 };
 
-function updatePositions(positions) {
-	
+function updatePositions(objects) {
+	// console.dir(objects);
+  for(var o = 0 ; o < objects.players.length; o++) {
+    console.log(objects.players[o].position);
+  }
 };
 
 function loadLevel(levelInfo) {

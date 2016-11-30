@@ -24,6 +24,8 @@ const
   KNIFE =  Math.pow(2,1),
   WALL = Math.pow(2,2);
 
+const moveSpeed = 300;
+
 module.exports = class Room {
   constructor(roomName, maxPlayerCount) {
     
@@ -35,7 +37,7 @@ module.exports = class Room {
     this.connectedPlayers = [];
     world = new p2.World();
     
-    clientWalls.push(createWall([0,0]));
+    //clientWalls.push(createWall([0,0]));
 
     setInterval(()=>{this.update()}, 1000 * TIME_STEP);
   }
@@ -66,7 +68,26 @@ module.exports = class Room {
   get getNumberOpenSpots () {
     return this.getMaxPlayers - this.getNumberPlayers;
   }
-  updatePhysics() {
+  updatePhysics(TIME_STEP) {
+
+    for(let p = 0 ; p < playerObjects.length ; p++)
+    {
+
+      if(!playerObjects[p].input || !playerObjects[p].input.right) {
+        continue;
+      }
+
+      let playerBody = world.getBodyById(playerObjects[p].ws.client.id);
+      
+      if(!playerBody) {
+        //  disconnect this player
+        continue;
+      }
+      
+      playerBody.velocity[0] = (playerObjects[p].input.right - playerObjects[p].input.left) * moveSpeed;
+      playerBody.velocity[1] = (playerObjects[p].input.down - playerObjects[p].input.up) * moveSpeed;
+
+    }
     // playerBodies.forEach(warp);
     // knifeBodies.forEach(warp);
     // wallBodies.forEach(warp);
@@ -103,19 +124,19 @@ module.exports = class Room {
     //  Sending player positions
     let objectStates = {
       players: [],
-      knives: [],
     };
     for(let p = 0 ; p < playerObjects.length ; p++) {
-      objectStates.players.push({
-        id: playerObjects[p].id,
-        body: playerObjects[p].body,
-      });
-    }
+      
+      const id = playerObjects[p].ws.client.id;
+      let body = world.getBodyById(id);
 
-    for(let k = 0 ; k < knifeObjects.length ; k++) {
-      objectStates.knifeObjects.push({
-        id: knifeObjects[p].id,
-        body: knifeObjects[p].body,
+      //console.dir(body.position);
+
+      objectStates.players.push({
+        id: id,
+        position: body.position,
+        velocity: body.velocity,
+        cooldown: 0,
       });
     }
 
@@ -149,23 +170,20 @@ module.exports = class Room {
     });
 
     socket.on("input", (data) => {
-      console.dir(data.id);
       for(let i = 0 ; i < playerObjects.length; i++) {
-        console.dir(playerObjects[i].ws);
+        if (data.id === playerObjects[i].ws.client.id) {
+          playerObjects[i].input = data;        
+        }
       }
     });
 
-    //  Create the player that hes using
-    //  id
+    //  Create the player
     let player = {
       ws: socket,
-      id: Math.random()*10000,
-      body: {},//createPlayerBody([0,0]),
       input: {},
     };
+    createPlayerBody(player.ws.client.id, [0,0]);
     playerObjects.push(player);
-
-    //gameserver.io.in(this.name).emit('message', 'A new player entered the room.');
   }
 
   leaveRoom(ws) {
@@ -198,9 +216,10 @@ function createWall(pos) {
     height: 1, 
   };
 }
-function createPlayerBody(pos) {
+function createPlayerBody(id, pos) {
   var playerBody = new p2.Body({
-      position: pos
+      position: pos,
+      id: id
   });
   playerBody.collisionGroup = PLAYER;
   playerBody.collisionMask = WALL | KNIFE;
