@@ -1,1 +1,40 @@
-canvas{margin: auto;}
+button
+{
+	display:block;
+	margin: auto;
+	margin-top: 20px;
+}
+
+body
+{
+	font-family: Arial;
+	background-color: #aaa;
+}
+
+h1
+{
+	font-size: 500%;
+	color: #058;
+}
+
+canvas
+{
+	position: absolute;
+	top:50%;
+	left:50%;
+	transform: translate(-50%, -55%);
+}
+
+#centerDiv
+{
+	text-align: center;
+	background-color: #bee;
+	border-radius: 20px;
+	padding: 55px 60px;
+	padding-top: 0px;
+
+	position: absolute;
+	top:50%;
+	left:50%;
+	transform: translate(-50%, -60%);
+}

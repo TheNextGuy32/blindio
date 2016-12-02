@@ -1,5 +1,8 @@
 var socket = {};
-window.onload = function(){
+function startServerConnection(){
+	//TODO: Get name from element id usernameInput (.value), pass to server to be character's name
+	//Then use that name for killfeeds etc
+	
   socket = io({'force new connection': true});
   
   socket.on('connect', ()=> {});
