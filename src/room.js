@@ -26,6 +26,17 @@ const
 
 const moveSpeed = 300;
 
+function isEmpty(map) {
+   var empty = true;
+
+   for(var key in map) {
+      empty = false;
+      break;
+   }
+
+   return empty;
+}
+
 module.exports = class Room {
   constructor(roomName, maxPlayerCount) {
     
@@ -72,18 +83,20 @@ module.exports = class Room {
 
     for(let p = 0 ; p < playerObjects.length ; p++)
     {
-
-      if(!playerObjects[p].input || !playerObjects[p].input.right) {
-        continue;
-      }
-
       let playerBody = world.getBodyById(playerObjects[p].ws.client.id);
       
       if(!playerBody) {
         //  disconnect this player
         continue;
       }
-      
+
+      if(!playerObjects[p].input || isEmpty(playerObjects[p].input)) {
+        //  No input means not moving
+        playerBody.velocity[0] = 0;
+        playerBody.velocity[1] = 0;
+        continue;
+      }
+
       playerBody.velocity[0] = (playerObjects[p].input.right - playerObjects[p].input.left) * moveSpeed;
       playerBody.velocity[1] = (playerObjects[p].input.down - playerObjects[p].input.up) * moveSpeed;
 
@@ -191,7 +204,7 @@ module.exports = class Room {
     for(let p = 0 ; p < playerObjects.length ; p ++) {
       if(playerObjects[p].ws === ws)
       {
-        //  kill playerobject
+        playerObjects.splice(p,1);
       }
     }
     

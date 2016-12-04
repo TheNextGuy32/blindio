@@ -32,8 +32,6 @@ function createWind() {
 }
 
 function create() {
-
-  console.dir(socket);
   game.physics.startSystem(Phaser.Physics.ARCADE);
 
   //  Create bakcground and hud
@@ -53,15 +51,9 @@ function create() {
   }
 
   players = [];
-
-  players.push(new LocalPlayer("Local Player"));
-  game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
-
+  console.log("Socket " + socket.id);
+  players.push(new GameCharacter(socket.id));
 }
-function addPlayer() {
-  players.push(new GameCharacter("Jeff"));
-}
-
 let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;

@@ -79,8 +79,8 @@ class GameCharacter
     do
     {
       isValidPos = true;
-      newPosX = Math.random()*game.world.width;
-      newPosY = Math.random()*game.world.height;
+      newPosX = 300;//Math.random()*game.world.width;
+      newPosY = 300;//Math.random()*game.world.height;
       
       for(let i = 0; i < walls.length; i++)
       {
@@ -112,6 +112,19 @@ class GameCharacter
       throwKnife(this, this.gameObject.body.center, vel);
     }
   }
+  throwKnifeAtPointer(pointer)
+  {
+    if(this.knife) //Safeguarding against null value of knife
+    {
+      console.log("Invalid Action: Trying to throw a knife while one is already out");
+      return;
+    }
+
+    let knifeVel = new Phaser.Point(pointer.position.x-(this.gameObject.body.center.x-game.camera.position.x), pointer.position.y-(this.gameObject.body.center.y-game.camera.position.y));
+    knifeVel.setMagnitude(800);
+
+    throwKnife(this, this.gameObject.body.center, knifeVel);
+  }
 
   get Velocity(){return this.gameObject.body.velocity;}
   set Velocity(velPoint) //should be Phaser.Point
@@ -121,7 +134,12 @@ class GameCharacter
   get Position(){return this.gameObject.body.position;}
   set Position(posPoint) //should be Phaser.Point
   {
-    this.gameObject.body.position = posPoint;
+    //this.gameObject.body.position.x = posPoint.x;
+    //this.gameObject.body.position.y = posPoint.y;
+    // this.gameObject.body.x = posPoint.x;
+    // this.gameObject.body.y = posPoint.y;
+    this.gameObject.x = posPoint.x;
+    this.gameObject.y = posPoint.y;
   }
   get Score() {return this.score;}
   set Score(num)
