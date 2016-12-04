@@ -2,7 +2,7 @@
   "name": "Blindio.io",
   "version": "0.0.0",
   "description": "Blind.io",
-  "main": "server.js",
+  "main": "./src/server.js",
   "scripts": {
     "test": "echo \"Tests Complete\"",
     "pretest": "eslint ./src --fix",
