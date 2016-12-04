@@ -51,12 +51,15 @@ function create() {
   }
 
   players = [];
+  
+  players.push(new GameCharacter(socket.id, playerUsername));
+  game.camera.follow(players[0].gameObject);
+
   for(var p = 0 ; p < level.players.length ; p++) {
     players.push(new GameCharacter(level.players[p].id, level.players[p].username));
     //  This does not handle positions, the first positions message does
   }
-
-  players.push(new GameCharacter(socket.id, playerUsername));
+  
   game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 
 }
