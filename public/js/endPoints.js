@@ -11,15 +11,31 @@ function startServerConnection(){
   
   socket = io({'force new connection': true});
   
-  socket.on('connect', ()=> {});
+  socket.emit('join', playerUsername);
+
+  socket.on('connect', () => {});
   socket.on('disconnect', ()=> {
   	console.log("Websocket closing");
   });
+
+  socket.on('user-connect', userConnect);
+  socket.on('user-disconnect', userDisconnect);
   
   socket.on('wind', windUpdate);
   socket.on('object-states', updatePositions);
   socket.on('load-level', loadLevel);
 }
+
+function userConnect (player) {
+  console.log("Player named " + player.username + " joined.");
+  addPlayer(player.id,player.username);
+  //create player with this username, id, and pos
+};
+
+function userDisconnect (player) {
+  console.log("Player named " + player.username + " left.");
+  removePlayer(player.id,player.username);
+};
 
 function windUpdate(wind) {
   windDirection = wind.direction;

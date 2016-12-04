@@ -51,13 +51,26 @@ function create() {
   }
 
   players = [];
+  for(var p = 0 ; p < level.players.length ; p++) {
+    players.push(new GameCharacter(level.players[p].id, level.players[p].username));
+    //  This does not handle positions, the first positions message does
+  }
 
-  players.push(new LocalPlayer(socket.id, playerUsername));
+  players.push(new GameCharacter(socket.id, playerUsername));
   game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 
 }
 function addPlayer(id,username) {
   players.push(new GameCharacter(id, username));
+}
+function removePlayer(id,username) {
+  for(var p = 0 ; p < players.length ; p++) {
+    if(players[p].id == id) {
+      players[p].gameObject.destroy();
+      players.splice(p,1);
+      break;
+    }
+  }
 }
 let windSpeed = 0;
 let windPhase = 0;

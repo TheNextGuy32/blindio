@@ -14,10 +14,11 @@ module.exports.listen = function(app){
   module.exports.io = io;
 
   io.on("connection", (socket) => {
-    console.log("Player joined gameserver.");
     
-    getOpenRoom().joinRoom(socket);
-
+    socket.on('join', (username) => {
+      console.log("Player named " + username + " joined gameserver.");
+      getOpenRoom().joinRoom(socket,username);
+    });
     socket.on('disconnect', (data) => {
       console.log("Player left gameserver.");
     });

@@ -14,7 +14,7 @@ class GameCharacter
     GameCharacter.respawnCharacter(this);
     this.knife = null;
     this.id = id;
-	this.name = name;
+	  this.name = name;
   }
 
   update()

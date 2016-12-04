@@ -163,23 +163,25 @@ module.exports = class Room {
     this.wind(TIME_STEP);
   }
   
-  joinRoom(socket) {
+  joinRoom(socket,username) {
+
     socket.join(this.name);
     socket.room = this;
+
+    //  All information necessary to bring new player up to speed
+    var playerInfo = [];
+
+    for(var p = 0 ; p < playerObjects.length ; p++) {
+      playerInfo.push({
+        username: playerObjects[p].username,
+        id: playerObjects[p].ws.id,
+      });
+    }
 
     socket.emit('load-level', {
       roomName: this.name, 
       walls: clientWalls,
-    });
-  
-    socket.on('disconnect', (data) => {
-      console.log("Player left room.");
-      gameserver.io.to(socket.room.getName).emit("user-disconnect", 'User left room.');
-      leaveRoom(socket);
-    });
-
-    socket.on('sending name', (data) => {
-      console.log("This player is named " + data + ".");
+      players: playerInfo
     });
 
     socket.on("input", (data) => {
@@ -192,11 +194,29 @@ module.exports = class Room {
 
     //  Create the player
     let player = {
+      username: username,
       ws: socket,
       input: {},
     };
-    createPlayerBody(player.ws.client.id, [0,0]);
+    var newPlayerPosition = [0,0];
+    createPlayerBody(player.ws.client.id, newPlayerPosition);
     playerObjects.push(player);
+
+    //  Broadcast player info for adding to clients
+    socket.broadcast.to(socket.room.getName).emit("user-connect", {
+      id: socket.id,
+      position: newPlayerPosition,
+      username: username
+    });
+    
+    socket.on('disconnect', (data) => {
+      console.log("Player left room.");
+      socket.broadcast.to(socket.room.getName).emit("user-disconnect", {
+        id: socket.id,
+        username: username
+      });
+      leaveRoom(socket);
+    });
   }
 
   leaveRoom(ws) {
