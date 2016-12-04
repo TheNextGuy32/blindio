@@ -1,8 +1,14 @@
-var socket = {};
+let socket = {};
+let playerUsername = ""; //If you can make this non-global, do so.
+
 function startServerConnection(){
-	//TODO: Get name from element id usernameInput (.value), pass to server to be character's name
-	//Then use that name for killfeeds etc
-	
+  playerUsername = document.getElementById("usernameInput").value;
+  if(playerUsername == "")
+  {
+	  document.getElementById("usernameWarning").className = "warningText";
+	  return;
+  }
+  
   socket = io({'force new connection': true});
   
   socket.on('connect', ()=> {});

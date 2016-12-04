@@ -25,6 +25,9 @@ canvas
 	transform: translate(-50%, -55%);
 }
 
+.hiddenText{display: none;}
+.warningText{color: #f00;}
+
 #centerDiv
 {
 	text-align: center;

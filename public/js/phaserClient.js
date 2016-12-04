@@ -54,12 +54,12 @@ function create() {
 
   players = [];
 
-  players.push(new LocalPlayer("Local Player"));
+  players.push(new LocalPlayer("Local Player", playerUsername));
   game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 
 }
 function addPlayer() {
-  players.push(new GameCharacter("Jeff"));
+  players.push(new GameCharacter("PLACEHOLDER_ID", "Jeff"));
 }
 
 let windSpeed = 0;
@@ -94,10 +94,6 @@ Object.seal({
     RIGHT: Phaser.KeyCode.D,
     UP: Phaser.KeyCode.W,
     DOWN: Phaser.KeyCode.S,
-  DEBUGKEY_CPUKNIFELEFT: Phaser.KeyCode.LEFT,
-  DEBUGKEY_CPUKNIFERIGHT: Phaser.KeyCode.RIGHT,
-  DEBUGKEY_CPUKNIFEUP: Phaser.KeyCode.UP,
-  DEBUGKEY_CPUKNIFEDOWN: Phaser.KeyCode.DOWN,
 });
 
 function sendInput() {
@@ -117,16 +113,3 @@ function update()
   sendInput();
   displayHandler.update();
 }
-
-// function throwKnife(player, posPoint, velPoint)
-// {
-//  player.knife = game.add.sprite(posPoint.x, posPoint.y, 'wallSprite');
-//  game.physics.enable(player.knife);
-//  player.knife.checkWorldBounds = true;
-//  player.knife.outOfBoundsKill = true;
-//  player.knife.body.immovable = true;
-//  player.knife.scale.setTo(1/5, 1/5);
-
-//  player.knife.body.center = posPoint;
-//  player.knife.body.velocity = velPoint;
-// }
