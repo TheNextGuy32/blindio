@@ -52,7 +52,8 @@ function create() {
 
   players = [];
 
-  players.push(new LocalPlayer(socket.id, playerUsername));
+  players.push(new GameCharacter(socket.id, playerUsername));
+  game.camera.follow(players[0].gameObject);
   game.input.keyboard.addKeyCapture([MOVEMENT.UP, MOVEMENT.DOWN, MOVEMENT.LEFT, MOVEMENT.RIGHT]);
 
 }
