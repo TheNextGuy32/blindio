@@ -1,5 +1,14 @@
-var socket = {};
-window.onload = function(){
+let socket = {};
+let playerUsername = ""; //If you can make this non-global, do so.
+
+function startServerConnection(){
+  playerUsername = document.getElementById("usernameInput").value;
+  if(playerUsername == "")
+  {
+	  document.getElementById("usernameWarning").className = "warningText";
+	  return;
+  }
+  
   socket = io({'force new connection': true});
   
   socket.on('connect', ()=> {});

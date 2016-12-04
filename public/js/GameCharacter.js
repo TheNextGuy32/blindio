@@ -3,16 +3,18 @@ class GameCharacter
   /*
   Member variables:
     id
+	name
     knife
     gameObject
     score
   */
 
-  constructor(id)
+  constructor(id, name)
   {
     GameCharacter.respawnCharacter(this);
     this.knife = null;
     this.id = id;
+	this.name = name;
   }
 
   update()
@@ -42,7 +44,7 @@ class GameCharacter
           {
             if(players[i] != this && game.physics.arcade.overlap(this.knife, players[i].gameObject))
             {
-              players[i].killCharacter(this.id);
+              players[i].killCharacter(this.name);
               this.knife.destroy();
               this.knife = null;
               this.score ++;
@@ -58,14 +60,14 @@ class GameCharacter
     }
   }
 
-  killCharacter(killerId)
+  killCharacter(killerName)
   {
     this.gameObject.destroy();
 
     const timeBeforeRespawn = 3250; //measured in ms
     setTimeout(GameCharacter.respawnCharacter, timeBeforeRespawn, this);
 
-    displayHandler.addNotification(killerId+" KILLED "+this.id);
+    displayHandler.addNotification(killerName+" KILLED "+this.name);
   }
 
   static respawnCharacter(charToRespawn)
@@ -147,4 +149,5 @@ class GameCharacter
     this.score = num;
   }
   get Id(){return this.id;}
+  get Name(){return this.name;}
 }
