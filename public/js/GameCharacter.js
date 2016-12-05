@@ -100,7 +100,6 @@ class GameCharacter
 
     charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
     game.physics.enable(charToRespawn.gameObject);
-    charToRespawn.gameObject.body.collideWorldBounds = true;
     charToRespawn.score = 0;
     
     displayHandler.setOnTop(); //Prevents things from being placed over the HUD text

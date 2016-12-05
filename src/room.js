@@ -45,7 +45,30 @@ module.exports = class Room {
 
     this.connectedPlayers = 0;
     this.world = new p2.World();
-
+    
+    /*5 walls:
+    	- one each in east/west (dividing map horizontally)
+    	- one each in north/south (dividing map vertically)
+    	- one placed randomly
+    */
+    let pos = [
+    	[Math.floor(Math.random()*WIDTH/2), Math.floor(Math.random()*HEIGHT)],
+    	[Math.floor(Math.random()*WIDTH/2)+WIDTH/2-20, Math.floor(Math.random()*HEIGHT)],
+    	[Math.floor(Math.random()*WIDTH), Math.floor(Math.random()*HEIGHT/2)],
+    	[Math.floor(Math.random()*WIDTH), Math.floor(Math.random()*HEIGHT/2)+HEIGHT/2-20],
+    	[Math.floor(Math.random()*(WIDTH-20)), Math.floor(Math.random()*(HEIGHT-20))]
+    ];
+    for(let i = 0; i < pos.length; i++)
+    {
+      let width = Math.floor(Math.random()*400)+25;
+      let height =  Math.floor(Math.random()*400)+25;
+      this.clientWalls.push ({
+        pos: pos[i],
+        height: height,
+        width: width,
+      });
+    	this.createWall(pos[i], width, height);
+    }
     setInterval(()=>{this.update()}, 1000 * TIME_STEP);
   }
 
@@ -234,15 +257,15 @@ module.exports = class Room {
     
     ws.leave(this.name);
   }
-  createWall(pos) {
+  createWall(pos,scale) {
     var wallBody = new p2.Body({
-        mass: 1,
-        position: pos,
-        velocity: [0, 0],
+      mass: 1,
+      position: pos,
+      velocity: [0, 0],
     });
     wallBody.collisionGroup = WALL;
     wallBody.collisionMask = PLAYER | KNIFE;
-    wallBody.addShape(new p2.Box({ width: 1, height: 1}));
+    wallBody.addShape(new p2.Box({ width: scale[0], height: scale[1]}));
     this.world.addBody(wallBody);
   }
   createPlayerBody(id, pos) {
