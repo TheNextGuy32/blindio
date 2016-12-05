@@ -100,7 +100,6 @@ function wind() {
   });
 }
 
-
 let MOVEMENT =
 Object.seal({
     LEFT: Phaser.KeyCode.A,

@@ -17,7 +17,9 @@ module.exports.listen = function(app){
     
     socket.on('join', (username) => {
       console.log("Player named " + username + " joined gameserver.");
-      getOpenRoom().joinRoom(socket,username);
+      let room = getOpenRoom();
+      room.joinRoom(socket,username);
+      console.log(room.getNumberOpenSpots + " spots remaining in room.");
     });
     socket.on('disconnect', (data) => {
       console.log("Player left gameserver.");
@@ -27,7 +29,10 @@ module.exports.listen = function(app){
 }
 
 function createNewRoom (id) {
-  const room = new Room(Math.floor(Math.random()*1000), 8);
+  const name = Math.floor(Math.random() * 40000);
+  const maxPlayers = 2;
+  const room = new Room(name, maxPlayers);
+  console.log(`Created room named ${name} of size ${maxPlayers}.`);
   rooms[room.name] = room;
   
   roomCount ++;
@@ -46,6 +51,8 @@ function getOpenRoom () {
 }
 
 module.exports.closeRoom = function(room) {
+  console.log(`Closed room named ${room.name}.`);
   roomCount--;
   rooms[room.name];
+
 }
