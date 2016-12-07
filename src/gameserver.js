@@ -30,7 +30,7 @@ module.exports.listen = function(app){
 
 function createNewRoom (id) {
   const name = Math.floor(Math.random() * 40000);
-  const maxPlayers = 2;
+  const maxPlayers = 8;
   const room = new Room(name, maxPlayers);
   console.log(`Created room named ${name} of size ${maxPlayers}.`);
   rooms[room.name] = room;

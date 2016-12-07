@@ -98,7 +98,7 @@ module.exports = class Room {
   get getNumberOpenSpots () {
     return this.getMaxPlayers - this.getNumberPlayers;
   }
-  updatePhysics(TIME_STEP) {
+  updatePhysicsAndCooldowns(TIME_STEP) {
 
     for(let p = 0 ; p < this.playerObjects.length ; p++)
     {
@@ -116,9 +116,16 @@ module.exports = class Room {
         continue;
       }
 
+	  this.playerObjects[p].cooldown -= TIME_STEP;
+	  
+	  //process input
       playerBody.velocity[0] = (this.playerObjects[p].input.right - this.playerObjects[p].input.left) * moveSpeed;
       playerBody.velocity[1] = (this.playerObjects[p].input.down - this.playerObjects[p].input.up) * moveSpeed;
-
+	  if(this.playerObjects[p].input.mouseDown && this.playerObjects[p].cooldown < 0)
+	  {
+		  //THROW KNIFE HERE
+		  this.playerObjects[p].cooldown = 1;
+	  }
     }
     // playerBodies.forEach(this.warp);
     // knifeBodies.forEach(this.warp);
@@ -170,7 +177,7 @@ module.exports = class Room {
         id: id,
         position: body.position,
         velocity: body.velocity,
-        cooldown: 0,
+        cooldown: this.playerObjects[p].cooldown,
       });
     }
 
@@ -179,7 +186,7 @@ module.exports = class Room {
   update() {
     this.world.step(TIME_STEP);
     
-    this.updatePhysics(TIME_STEP);
+    this.updatePhysicsAndCooldowns(TIME_STEP);
     this.positions(TIME_STEP);
     this.wind(TIME_STEP);
   }
@@ -218,8 +225,9 @@ module.exports = class Room {
       username: username,
       ws: socket,
       input: {},
+	  cooldown: 1,
     };
-    var newPlayerPosition = [Math.random()*WIDTH,Math.random()*HEIGHT];
+    let newPlayerPosition = [Math.random()*WIDTH,Math.random()*HEIGHT];
     this.createPlayerBody(player.ws.client.id, newPlayerPosition);
     this.playerObjects.push(player);
     this.connectedPlayers ++;

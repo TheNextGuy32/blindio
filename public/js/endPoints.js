@@ -1,5 +1,6 @@
 let socket = {};
 let playerUsername = ""; //If you can make this non-global, do so.
+let lastTime;
 
 function startServerConnection(){
   playerUsername = document.getElementById("usernameInput").value;
@@ -43,6 +44,7 @@ function windUpdate(wind) {
 };
 
 function updatePositions(objects) {
+	
   if(!players)
     return;
 
@@ -53,7 +55,9 @@ function updatePositions(objects) {
       {
         players[p].Position = new Phaser.Point(objects.players[o].position[0],objects.players[o].position[1]);
         players[p].Velocity = new Phaser.Point(objects.players[o].velocity[0],objects.players[o].velocity[1]);  
-      }
+		players[p].Cooldown = objects.players[o].cooldown;
+		break;
+	  }
     }
   }
 };

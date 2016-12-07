@@ -14,7 +14,8 @@ class GameCharacter
     GameCharacter.respawnCharacter(this);
     this.knife = null;
     this.id = id;
-	  this.name = name;
+	this.name = name;
+	this.cooldown = 0;
   }
 
   update()
@@ -126,7 +127,8 @@ class GameCharacter
 
     throwKnife(this, this.gameObject.body.center, knifeVel);
   }
-
+  get Cooldown(){return this.cooldown;}
+  set Cooldown(num){this.cooldown = num;}
   get Velocity(){return this.gameObject.body.velocity;}
   set Velocity(velPoint) //should be Phaser.Point
   {
