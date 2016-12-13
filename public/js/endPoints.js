@@ -45,20 +45,36 @@ function windUpdate(wind) {
 
 function updatePositions(objects) {
 	
-  if(!players)
-    return;
-
-  for(var o = 0 ; o < objects.players.length; o++) {  
-    for(var p = 0 ; p < players.length ; p++) {
-      //console.log(objects.players[o].id + " " + players[p].id)
-      if(objects.players[o].id === players[p].id)
-      {
-        players[p].Position = new Phaser.Point(objects.players[o].position[0],objects.players[o].position[1]);
-        players[p].Velocity = new Phaser.Point(objects.players[o].velocity[0],objects.players[o].velocity[1]);  
-		players[p].Cooldown = objects.players[o].cooldown;
-		break;
-	  }
+  if(players)
+  {
+    for(let o = 0 ; o < objects.players.length; o++)
+	{
+      for(let p = 0 ; p < players.length ; p++)
+	  {
+        //console.log(objects.players[o].id + " " + players[p].id)
+        if(objects.players[o].id === players[p].id)
+        {
+          players[p].Position = new Phaser.Point(objects.players[o].position[0],objects.players[o].position[1]);
+          players[p].Velocity = new Phaser.Point(objects.players[o].velocity[0],objects.players[o].velocity[1]);  
+          players[p].Cooldown = objects.players[o].cooldown;
+          break;
+        }
+      }
     }
+  }
+  if(knives)
+  {
+    for(let o = 0; o < objects.knives.length; o++)
+	{
+		for(let k = 0; k < knives.length; k++)
+		{
+			if(objects.players[o].id === knives[k].id)
+			{
+				knives[k].Position = new Phaser.Point(objects.knives[o].position[0], objects.knives[o].position[1]);
+				knives[k].Velocity = new Phaser.Point(objects.knives[o].velocity[0], objects.knives[o].velocity[1]);
+			}
+		}
+	}
   }
 };
 

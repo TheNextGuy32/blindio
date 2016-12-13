@@ -123,8 +123,12 @@ module.exports = class Room {
       playerBody.velocity[1] = (this.playerObjects[p].input.down - this.playerObjects[p].input.up) * moveSpeed;
 	  if(this.playerObjects[p].input.mouseDown && this.playerObjects[p].cooldown < 0)
 	  {
-		  //THROW KNIFE HERE
-		  this.playerObjects[p].cooldown = 1;
+		//Throwing knife
+		let knifeVelMagnitude = Math.sqrt(this.playerObjects[p].input.mouseOffset[0]*this.playerObjects[p].input.mouseOffset[0]+this.playerObjects[p].input.mouseOffset[1]*this.playerObjects[p].input.mouseOffset[1]);
+		this.createKnife([playerBody.position[0]+25, playerBody.position[1]+25], [this.playerObjects[p].input.mouseOffset[0]*800/knifeVelMagnitude, this.playerObjects[p].input.mouseOffset[1]*800/knifeVelMagnitude]);
+		this.playerObjects[p].cooldown = 1.5;
+		
+		//broadcast a knife-spawn event here?
 	  }
     }
     // playerBodies.forEach(this.warp);
@@ -288,6 +292,7 @@ module.exports = class Room {
   }
 
   createKnife(pos, vel) {
+    console.log("THROWING KNIFE AT "+pos+" WITH VELOCITY "+vel);
     let knifeBody = new p2.Body({
       mass: 5,
       position: pos,

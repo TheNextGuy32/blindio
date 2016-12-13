@@ -40,7 +40,7 @@ function HUD()
 
   this.update = function()
   {
-    this.playerStatusText.text = "Score: "+(players[0].score)+"\nKnife: "+(players[0].Cooldown <= 0 ? "Ready" : players[0].Cooldown);
+    this.playerStatusText.text = "Score: "+(players[0].score)+"\nKnife: "+(players[0].Cooldown <= 0 ? "Ready" : players[0].Cooldown.toFixed(2));
   
     this.fpsText.text = game.time.fps+" FPS";
   }

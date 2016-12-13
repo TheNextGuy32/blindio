@@ -4,9 +4,9 @@ class GameCharacter
   Member variables:
     id
 	name
-    knife
     gameObject
     score
+	cooldown
   */
 
   constructor(id, name)
@@ -20,6 +20,7 @@ class GameCharacter
 
   update()
   {
+	  /*
     if(this.gameObject.alive)
     {
       game.physics.arcade.collide(this.gameObject, walls);
@@ -59,6 +60,7 @@ class GameCharacter
         this.knife = null;
       }
     }
+	*/
   }
 
   killCharacter(killerName)
@@ -101,6 +103,7 @@ class GameCharacter
 
     charToRespawn.gameObject = game.add.sprite(newPosX, newPosY, 'playerSprite');
     game.physics.enable(charToRespawn.gameObject);
+	charToRespawn.gameObject.body.immovable = true;
     charToRespawn.score = 0;
     
     displayHandler.setOnTop(); //Prevents things from being placed over the HUD text
@@ -132,17 +135,19 @@ class GameCharacter
   get Velocity(){return this.gameObject.body.velocity;}
   set Velocity(velPoint) //should be Phaser.Point
   {
-    this.gameObject.body.velocity = velPoint;
+    if(this.gameObject)
+    {
+      this.gameObject.body.velocity = velPoint;
+    }
   }
   get Position(){return this.gameObject.body.position;}
   set Position(posPoint) //should be Phaser.Point
   {
-    //this.gameObject.body.position.x = posPoint.x;
-    //this.gameObject.body.position.y = posPoint.y;
-    // this.gameObject.body.x = posPoint.x;
-    // this.gameObject.body.y = posPoint.y;
-    this.gameObject.x = posPoint.x;
-    this.gameObject.y = posPoint.y;
+    if(this.gameObject)
+    {
+      this.gameObject.x = posPoint.x;
+      this.gameObject.y = posPoint.y;
+    }
   }
   get Score() {return this.score;}
   set Score(num)

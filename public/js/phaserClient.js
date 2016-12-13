@@ -1,4 +1,4 @@
-let game, displayHandler, players, walls, level;
+let game, displayHandler, players, knives, walls, level;
 let id = "Oliver";
 
 const WORLD_WIDTH = 2000;
@@ -66,6 +66,9 @@ function create() {
 function addPlayer(id,username) {
   players.push(new GameCharacter(id, username));
 }
+function addKnife(id){
+	knives.push(new Knife(id));
+}
 function removePlayer(id,username) {
   for(var p = 0 ; p < players.length ; p++) {
     if(players[p].id == id) {
@@ -75,6 +78,17 @@ function removePlayer(id,username) {
     }
   }
 }
+function removeKnife(id)
+{
+	for(var k = 0; k < knives.length; k++)
+	{
+		if(knives[k].id == id)
+		{
+			knives[k].gameObject.destroy();
+			knives.splice(k, 1)
+		}
+	}
+}
 let windSpeed = 0;
 let windPhase = 0;
 let windDirection = 0;
@@ -83,21 +97,9 @@ const breezeForce = 3;
 function wind() {
   const windSpeed = Math.sin(windPhase) * breezeForce;
 
-  players.forEach(function(element, index, array) {
-    if(element.gameObject.body) {
-      element.gameObject.body.immovable = true;
-    }
-  });
-  
   windGrid.update(
     Math.cos(windDirection)*windSpeed, 
     Math.sin(windDirection)*windSpeed);
-
-  players.forEach(function(element, index, array) {
-    if(element.gameObject.body) {
-      element.gameObject.body.immovable = false;
-    }
-  });
 }
 
 let MOVEMENT =
@@ -115,7 +117,8 @@ function sendInput() {
     right: game.input.keyboard.isDown(MOVEMENT.RIGHT) || false, 
     down: game.input.keyboard.isDown(MOVEMENT.DOWN) || false, 
     left: game.input.keyboard.isDown(MOVEMENT.LEFT) || false, 
-    mouseDown: game.input.activePointer.leftButton.isDown
+    mouseDown: game.input.activePointer.leftButton.isDown || false,
+	mouseOffset:  [game.input.activePointer.x-(players[0].gameObject.body.center.x-game.camera.position.x), game.input.activePointer.y-(players[0].gameObject.body.center.y-game.camera.position.y)]
   });
 }
 
